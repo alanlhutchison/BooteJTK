@@ -45,22 +45,25 @@ def main(args):
     fn_phase = args.phase
     fn_width = args.width
     fn_out = args.output
+    fn_out_pkl = args.pickle # This is the output file which could be read in early
+    fn_list = args.id_list # This is the the list of ids to go through
 
-    fn_out_pkl = args.pickle
-
-    fn_list = args.id_list
+    ### If no list file set id_list to empty
     if fn_list!='DEFAULT':
         id_list = read_in_list(fn_list)
     else:
         id_list = []
 
+    ### If no pkl out file, modify the option variable
     if os.path.isfile(fn_out_pkl):
         opt = 'premade'
     else:
         opt = ''
 
-    """This is a default"""
-    size = 1000000
+    ### The number of bootstraps to be done
+    size = 100
+
+    ### If not given a new name, name fn_out after the fn file
     if fn_out == "DEFAULT":
         if ".txt" in fn:
             fn_out=fn.replace(".txt","_"+prefix+"_bootejtk.txt")
@@ -68,27 +71,30 @@ def main(args):
             fn_out = fn+"_" +prefix + "_bootejtk.txt"
 
         
-    
+    ### If not given a new name, name fn_out_pkl based on the fn file
     if fn_out_pkl == 'DEFAULT':
         fn_out_pkl = fn.replace('.txt','_boot{}_order_probs.pkl'.format(int(np.log10(size))))
 
+    ### Name vars file based on pkl out file
     fn_out_pkl_vars = fn_out_pkl.replace('.pkl','_vars.pkl')
-    
+
+
+    ### Read in lists of search parameters
     waveforms = read_in_list(fn_waveform)
     periods = read_in_list(fn_period)
     phases = read_in_list(fn_phase)
     widths = read_in_list(fn_width)
+    
     # If BooteJTK2
     #new_header = list(new_header)+list(new_header)
-    
-    if 'premade' not in opt:
-        d_data_master = eBayes(d_data_master)
-    elif 'premade' in opt:
-        d_data_master,d_order_probs = open_pickle_append2(fn_out_pkl)
-        # RUN THIS IN THE EM CASE
-        #d_data_master,d_order_probs = pickle.load(open(fn_out_pkl,'rb'))#open_pickle_append2(fn_out_pkl)        
+
+
+
+
+
+    ### If we already have the PKL file, we just need a place to put the header information
     if fn=='DEFAULT' and fn_out_pkl!='DEFAULT':
-        original = False
+        original = False # This is currently unused
         series = [[key,0] for key in d_data_master.keys()]
         fn_out= fn_out_pkl.replace('.pkl','_{0}-bootejtk.txt'.format(int(np.log10(size))))
         if fn_out_pkl[:-4]=='2.pkl':
@@ -96,24 +102,32 @@ def main(args):
         else:
             new_header = [0,4,8,12,16,20]
 
-
-
-                                   
+    ### If we have the initial data we can get it 
     elif fn!='DEFAULT':
         header,data = read_in(fn)
         header,series = organize_data(header,data)
         d_data_master,new_header = get_data(header,data)
         print new_header
 
+    if 'premade' not in opt:
+        d_data_master = eBayes(d_data_master)
+    elif 'premade' in opt:
+        d_data_master,d_order_probs = open_pickle_append2(fn_out_pkl)
+        # RUN THIS IN THE EM CASE
+        #d_data_master,d_order_probs = pickle.load(open(fn_out_pkl,'rb'))#open_pickle_append2(fn_out_pkl)        
 
     add_on = 1
     while os.path.isfile(fn_out):
         print fn_out, "already exists, take evasive action!!!"
-        fn_out = ".".join(fn_out.split(".")[0:-1])+"_"+str(add_on)+".txt"
+        if add_on==1:
+            origstr = '.txt'
+        else:
+            origstr = '_{0}.txt'.format(add_on-1)
+        fn_out = fn.replace(origstr,'_{0}.txt'.format(add_on))
         add_on = add_on + 1
 
     ### This is for the Hogen case ###
-    new_header = [0,2,4,6,8,10,12,14,16,18,20,22]
+    #new_header = [0,2,4,6,8,10,12,14,16,18,20,22]
 
     
     #for key in d_data_master:
@@ -136,15 +150,16 @@ def main(args):
     time_limit = 34
     time_limit_sec = float(60*60*time_limit)
     g = open(fn_out,'a')
-    g.write("ID\tWaveform\tPeriodMean\tPeriodStdDev\tPhaseMean\tPhaseStdDev\tNadirMean\tNadirStdDev\tMean\tStd_Dev\tMax\tMin\tMax_Amp\tFC\tIQR_FC\tTauMean\tTauStdDev\tP\n")
+    g.write("ID\tWaveform\tPeriodMean\tPeriodStdDev\tPhaseMean\tPhaseStdDev\tNadirMean\tNadirStdDev\tMean\tStd_Dev\tMax\tMin\tMax_Amp\tFC\tIQR_FC\tTauMean\tTauStdDev\n")
     g.close()
     time_original = time.time()
     for serie in series:
+        ### If we have an ID list, we only want to deal with data from it.
         if id_list!=[]:
             if serie[0] not in id_list:
                 #print 'Passing'
                 pass
-            
+        ### We have time limits here so we don't blow out the Midway allocation
         time_diff = time.time() - time_original
         if time_diff < time_limit_sec:
             if fn=='DEFAULT':
@@ -161,75 +176,84 @@ def main(args):
                 sFC = FC(serie)
             local_ps = []
             geneID = serie[0]
+            s_stats = [smean,sstd,mmax,mmin,MAX_AMP,sFC,sIQR_FC]
+            ### Need to make this file if it doesn't exist already
             if 'premade' not in opt:
                 d_data_sub = {geneID:d_data_master[geneID]}
                 d_order_probs = get_order_prob(d_data_sub,size)
                 f1 = open(fn_out_pkl,'ab')
                 pickle.dump([d_data_sub,d_order_probs],f1)
                 f1.close()
-                
-            totals = np.array([complex(0,0),complex(0,0),complex(0,0),complex(0,0),complex(0,0)])
+
+            #totals = np.array([complex(0,0),complex(0,0),complex(0,0),complex(0,0),complex(0,0)])
             d_tau[geneID] = {}
             d_ph[geneID] = {}
             if geneID in d_order_probs:
                 #print geneID,'in d_order_probs'
-                for kkey in d_order_probs[geneID]:
-                    res = []
-                    for period in np.array(periods,dtype=float):
-                        for phase in np.array(phases,dtype=float):
-                            for width in np.array(widths,float):
-                                serie = kkey
-                                reference = generate_base_reference(new_header,waveform,period,phase,width)
-                                tau,p = generate_mod_series(reference,serie,RealKen)
-                                res.append([tau,p,period,phase,periodic(phase+width)])
-                    r = sorted(res)[-1]
-                    if r[0] not in d_tau[geneID]:
-                        d_tau[geneID][r[0]] = 0
-                    d_tau[geneID][r[0]]+=d_order_probs[geneID][kkey]
-                        
-                    if r[3] not in d_ph[geneID]:
-                        d_ph[geneID][r[3]] = 0
-                    d_ph[geneID][r[3]]+=d_order_probs[geneID][kkey]
-                    
-                    r[3] = r[3] * np.pi /12.
-                    r[4] = r[4] * np.pi /12.
-                    r=np.array([r[0],r[1],r[2],complex(np.cos(r[3]),np.sin(r[3])),complex(np.cos(r[4]),np.sin(r[4]))])
-                    sub = r*d_order_probs[geneID][kkey]
-                    totals+= sub
-                m = totals
-                m = np.array([m[0].real,m[1].real,m[2].real,cmath.phase(m[3]),cmath.phase(m[4])],dtype=float)*np.array([1,1,1,12/np.pi,12/np.pi])
-                cos_sum1,sin_sum1,cos_sum2,sin_sum2,tau_var,p_var,per_var = 0.,0.,0.,0.,0.,0.,0.            
+                def get_stat_probs(dorder,periods,phases,widths):
+                    d_taugene,d_phgene = {},{}
+                    totals = np.array([complex(0,0),complex(0,0),complex(0,0),complex(0,0),complex(0,0)])
+                
+                    for kkey in d_order_probs[geneID]:
+                        res = []
+                        for period in np.array(periods,dtype=float):
+                            for phase in np.array(phases,dtype=float):
+                                for width in np.array(widths,float):
+                                    serie = kkey
+                                    reference = generate_base_reference(new_header,waveform,period,phase,width)
+                                    tau,p = generate_mod_series(reference,serie,RealKen)
+                                    res.append([tau,p,period,phase,periodic(phase+width)])
+                        r = sorted(res)[-1]
+                        if r[0] not in d_tau[geneID]:
+                            d_tau[geneID][r[0]] = 0
+                        d_tau[geneID][r[0]]+=d_order_probs[geneID][kkey]
 
+                        if r[3] not in d_ph[geneID]:
+                            d_ph[geneID][r[3]] = 0
+                        d_ph[geneID][r[3]]+=d_order_probs[geneID][kkey]
 
-                for kkey in d_order_probs[geneID]:
-                    res = []
-                    for period in periods:
-                        for phase in phases:
-                            for width in widths:
-                                serie = kkey
-                                reference = generate_base_reference(new_header,waveform,period,phase,width)
-                                tau,p = generate_mod_series(reference,serie,RealKen)
-                                res.append([tau,p,period,phase,periodic(phase+width)])
-                    r = np.array(sorted(res)[-1],dtype=float)
-                    r[3] = r[3] * np.pi /12.
-                    r[4] = r[4] * np.pi /12.
-                    tau_var+=(r[0]-float(m[0]))*(r[0]-float(m[0]))*d_order_probs[geneID][kkey]
-                    p_var+=(r[1]-float(m[1]))*(r[1]-float(m[1]))*d_order_probs[geneID][kkey]
-                    per_var+=(r[2]-float(m[2]))*(r[2]-float(m[2]))*d_order_probs[geneID][kkey]
-                    cos_sum1+=(np.cos(r[3])*d_order_probs[geneID][kkey])
-                    sin_sum1+=(np.sin(r[3])*d_order_probs[geneID][kkey])
-                    cos_sum2+=(np.cos(r[4])*d_order_probs[geneID][kkey])
-                    sin_sum2+=(np.sin(r[4])*d_order_probs[geneID][kkey])   
+                        r[3] = r[3] * np.pi /12.
+                        r[4] = r[4] * np.pi /12.
+                        r=np.array([r[0],r[1],r[2],complex(np.cos(r[3]),np.sin(r[3])),complex(np.cos(r[4]),np.sin(r[4]))])
+                        sub = r*d_order_probs[geneID][kkey]
+                        totals+= sub
+                    m = totals
+                    m = np.array([m[0].real,m[1].real,m[2].real,cmath.phase(m[3]),cmath.phase(m[4])],dtype=float)*np.array([1,1,1,12/np.pi,12/np.pi])
+                    cos_sum1,sin_sum1,cos_sum2,sin_sum2,tau_var,p_var,per_var = 0.,0.,0.,0.,0.,0.,0.            
+                    for kkey in d_order_probs[geneID]:
+                        res = []
+                        for period in periods:
+                            for phase in phases:
+                                for width in widths:
+                                    serie = kkey
+                                    reference = generate_base_reference(new_header,waveform,period,phase,width)
+                                    tau,p = generate_mod_series(reference,serie,RealKen)
+                                    res.append([tau,p,period,phase,periodic(phase+width)])
+                        r = np.array(sorted(res)[-1],dtype=float)
+                        r[3] = r[3] * np.pi /12.
+                        r[4] = r[4] * np.pi /12.
+                        tau_var+=(r[0]-float(m[0]))*(r[0]-float(m[0]))*d_order_probs[geneID][kkey]
+                        p_var+=(r[1]-float(m[1]))*(r[1]-float(m[1]))*d_order_probs[geneID][kkey]
+                        per_var+=(r[2]-float(m[2]))*(r[2]-float(m[2]))*d_order_probs[geneID][kkey]
+                        cos_sum1+=(np.cos(r[3])*d_order_probs[geneID][kkey])
+                        sin_sum1+=(np.sin(r[3])*d_order_probs[geneID][kkey])
+                        cos_sum2+=(np.cos(r[4])*d_order_probs[geneID][kkey])
+                        sin_sum2+=(np.sin(r[4])*d_order_probs[geneID][kkey])   
 
-                ph_var=(1.-np.sqrt(cos_sum1**2 + sin_sum1**2))*24.
-                nad_var=(1.-np.sqrt(cos_sum2**2 + sin_sum2**2))*24.
-                tau_mean = m[0]
-                p_mean = m[1]
-                per_mean = m[2]
-                ph_mean = m[3]
-                nad_mean = m[4]
+                    ph_var=(1.-np.sqrt(cos_sum1**2 + sin_sum1**2))*24.
+                    nad_var=(1.-np.sqrt(cos_sum2**2 + sin_sum2**2))*24.
+                    tau_mean = m[0]
+                    p_mean = m[1]
+                    per_mean = m[2]
+                    ph_mean = m[3]
+                    nad_mean = m[4]
 
-                out_line = [geneID,waveform,per_mean,np.sqrt(per_var),ph_mean,np.sqrt(ph_var),nad_mean,np.sqrt(nad_var),smean,sstd,mmax,mmin,MAX_AMP,sFC,sIQR_FC,tau_mean,np.sqrt(tau_var),p_mean]
+                    out1,out2 = [geneID,waveform,per_mean,np.sqrt(per_var),ph_mean,np.sqrt(ph_var),nad_mean,np.sqrt(nad_var)],[tau_mean,np.sqrt(tau_var)]
+                    return out1,out2,d_taugene,d_phgene
+                out1,out2,d_taugene,d_phgene = get_stat_probs(d_order_probs[geneID],periods,phases,widths)
+                print out1,out2
+                out_line = out1+s_stats+out2
+
                 out_line = [str(l) for l in out_line]
                 g = open(fn_out,'a')
                 g.write("\t".join(out_line)+"\n")
@@ -237,7 +261,7 @@ def main(args):
                 print geneID
                 done.append(geneID)
                 sys.stdout.flush()
-
+        
                 pickle.dump([d_tau,d_ph],open(fn_out_pkl_vars,'ab'))
             #else:
                 #pprint 'Gene not in pkl',geneID
