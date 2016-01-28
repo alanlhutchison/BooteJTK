@@ -14,27 +14,21 @@ Please use ./BooteJTK -h to see the help screen for further instructions on runn
 
 """
 VERSION="0.1"
+
 import cmath
 import scipy.stats as ss
 import numpy as np
-import random
-#from matplotlib import pyplot as plt
 from scipy.stats import kendalltau as kt
 from scipy.stats import multivariate_normal as mn
 from scipy.stats import rankdata
-from scipy.integrate import quad
-import math
-import subprocess
-import pickle
+from scipy.stats import norm
 from scipy.special import polygamma
-import copy
+
+import pickle
 from operator import itemgetter
 import sys
 import argparse
-import itertools as it
 import time
-
-from scipy.stats import norm
 import os.path
 
 def main(args):
@@ -48,7 +42,7 @@ def main(args):
     fn_out_pkl = args.pickle # This is the output file which could be read in early
     fn_list = args.id_list # This is the the list of ids to go through
     fn_null_list = args.null_list # These are geneIDs to be used to estimate the SD
-    
+    size = int(args.size)
     ### If no list file set id_list to empty
     if fn_list!='DEFAULT':
         id_list = read_in_list(fn_list)
@@ -62,7 +56,8 @@ def main(args):
         opt = ''
 
     ### The number of bootstraps to be done
-    size = 100
+    # This is now a input parameter
+    #size = 100
 
     ### If not given a new name, name fn_out after the fn file
     if fn_out == "DEFAULT":
@@ -70,7 +65,6 @@ def main(args):
             fn_out=fn.replace(".txt","_"+prefix+"_bootejtk.txt")
         else:
             fn_out = fn+"_" +prefix + "_bootejtk.txt"
-
         
     ### If not given a new name, name fn_out_pkl based on the fn file
     if fn_out_pkl == 'DEFAULT':
@@ -79,23 +73,11 @@ def main(args):
     ### Name vars file based on pkl out file
     fn_out_pkl_vars = fn_out_pkl.replace('.pkl','_vars.pkl')
 
-
-    ### Read in lists of search parameters
-    waveforms = read_in_list(fn_waveform)
-    periods = read_in_list(fn_period)
-    phases = read_in_list(fn_phase)
-    widths = read_in_list(fn_width)
-    
-    # If BooteJTK2
-    #new_header = list(new_header)+list(new_header)
-
-
-
-
-
+ 
+    assert fn!='DEFAULT' or fn_out_pkl!='DEFAULT'   
     ### If we already have the PKL file, we just need a place to put the header information
     if fn=='DEFAULT' and fn_out_pkl!='DEFAULT':
-        original = False # This is currently unused
+        #original = False # This is currently unused
         series = [[key,0] for key in d_data_master.keys()]
         fn_out= fn_out_pkl.replace('.pkl','_{0}-bootejtk.txt'.format(int(np.log10(size))))
         if fn_out_pkl[:-4]=='2.pkl':
@@ -110,11 +92,11 @@ def main(args):
         d_data_master,new_header = get_data(header,data)
         print new_header
 
+    
     if 'premade' not in opt:
         null_ids = read_in_list(fn_null_list)
-        
         D_null = get_series_data(data,null_ids)
-        d_data_master = eBayes(d_data_master)
+        d_data_master = eBayes(d_data_master,D_null)
     elif 'premade' in opt:
         d_data_master,d_order_probs = open_pickle_append2(fn_out_pkl)
         # RUN THIS IN THE EM CASE
@@ -137,7 +119,17 @@ def main(args):
     #for key in d_data_master:
     #d_order_probs = get_order_prob2(d_data_master,size)
     #pickle.dump([d_data_master,d_order_probs], open(fn_out_pkl,'wb'))
+    ### Read in lists of search parameters
+    waveforms = read_in_list(fn_waveform)
+    periods = read_in_list(fn_period)
+    phases = read_in_list(fn_phase)
+    widths = read_in_list(fn_width)
+    
+    # If BooteJTK2
+    #new_header = list(new_header)+list(new_header)
 
+
+    
     print 'Pickled Orders'
     waveform = []
     Ps = []
@@ -736,6 +728,15 @@ def __create_parser__():
                           default="",
                           help="string to be inserted in the output filename for this run")
 
+
+    analysis.add_argument('-z',"--size",
+                          dest="size",
+                          type=str,
+                          metavar="int",
+                          action='store',
+                          default="",
+                          help="Number of bootstraps to be performed")
+    
 
     analysis.add_argument('-w',"--waveform",
                           dest="waveform",
