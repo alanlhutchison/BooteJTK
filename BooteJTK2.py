@@ -43,72 +43,58 @@ def main(args):
     fn_list = args.id_list # This is the the list of ids to go through
     fn_null_list = args.null_list # These are geneIDs to be used to estimate the SD
     size = int(args.size)
+
     ### If no list file set id_list to empty
-    if fn_list!='DEFAULT':
-        id_list = read_in_list(fn_list)
-    else:
-        id_list = []
+    id_list = read_in_list(fn_list) if fn_list.split('/')[-1]!='DEFAULT' else []
 
+    null_list = read_in_list(fn_null_list) if fn_null_list.split('/')[-1]!='DEFAULT' else []
+        
     ### If no pkl out file, modify the option variable
-    if os.path.isfile(fn_out_pkl):
-        opt = 'premade'
-    else:
-        opt = ''
-
-    ### The number of bootstraps to be done
-    # This is now a input parameter
-    #size = 100
+    opt = 'premade' if os.path.isfile(fn_out_pkl) else ''
 
     ### If not given a new name, name fn_out after the fn file
-    if fn_out == "DEFAULT":
-        if ".txt" in fn:
-            fn_out=fn.replace(".txt","_"+prefix+"_bootejtk.txt")
-        else:
-            fn_out = fn+"_" +prefix + "_bootejtk.txt"
+    if fn_out.split('/')[-1] == "DEFAULT":
+        fn_out = fn.replace(".txt","_"+prefix+"_bootejtk.txt") if ".txt" in fn else fn+"_" +prefix + "_bootejtk.txt"
         
     ### If not given a new name, name fn_out_pkl based on the fn file
-    if fn_out_pkl == 'DEFAULT':
+    if fn_out_pkl.split('/')[-1] == 'DEFAULT':
         fn_out_pkl = fn.replace('.txt','_boot{}_order_probs.pkl'.format(int(np.log10(size))))
 
     ### Name vars file based on pkl out file
-    fn_out_pkl_vars = fn_out_pkl.replace('.pkl','_vars.pkl')
+    fn_out_pkl_vars = fn_out_pkl.replace('.pkl','_vars.pkl') 
+    EM = False
+    assert fn.split('/')[-1]!='DEFAULT' or fn_out_pkl.split('/')[-1]!='DEFAULT'   
 
- 
-    assert fn!='DEFAULT' or fn_out_pkl!='DEFAULT'   
+
+
+
+    if fn.split('/')[-1][:2]=='EM':
+        EM = True
+        new_header = [0,4,8,12,16,20]
+        d_data_master = read_in_EMdata(fn)
     ### If we already have the PKL file, we just need a place to put the header information
-    if fn=='DEFAULT' and fn_out_pkl!='DEFAULT':
-        #original = False # This is currently unused
-        series = [[key,0] for key in d_data_master.keys()]
+    elif fn.split('/')[-1]=='DEFAULT' and fn_out_pkl.split('/')[-1]!='DEFAULT':
+        d_series = dict(zip([key for key in d_data_master.keys()],[[]*len(d_data_master)]))
         fn_out= fn_out_pkl.replace('.pkl','_{0}-bootejtk.txt'.format(int(np.log10(size))))
-        if fn_out_pkl[:-4]=='2.pkl':
-            new_header = [0,4,8,12,16,20,0,4,8,12,16,20]
-        else:
-            new_header = [0,4,8,12,16,20]
-
+        new_header = [0,4,8,12,16,20,0,4,8,12,16,20] if fn_out_pkl[:-4]=='2.pkl' else [0,4,8,12,16,20]
     ### If we have the initial data we can get it 
-    elif fn!='DEFAULT':
+    elif fn.split('/')[-1]!='DEFAULT':
         header,data = read_in(fn)
-        header,series = organize_data(header,data)
+        d_series = dict_data(data)
         d_data_master,new_header = get_data(header,data)
         print new_header
 
-    
     if 'premade' not in opt:
-        null_ids = read_in_list(fn_null_list)
-        D_null = get_series_data(data,null_ids)
+        D_null = get_series_data2(d_data_master,null_list) if null_list!=[] else {}
         d_data_master = eBayes(d_data_master,D_null)
     elif 'premade' in opt:
         d_data_master,d_order_probs = open_pickle_append2(fn_out_pkl)
-        # RUN THIS IN THE EM CASE
-        #d_data_master,d_order_probs = pickle.load(open(fn_out_pkl,'rb'))#open_pickle_append2(fn_out_pkl)        
+
 
     add_on = 1
     while os.path.isfile(fn_out):
         print fn_out, "already exists, take evasive action!!!"
-        if add_on==1:
-            origstr = '.txt'
-        else:
-            origstr = '_{0}.txt'.format(add_on-1)
+        origstr = '.txt' if add_on==1 else '_{0}.txt'.format(add_on-1)
         fn_out = fn_out.replace(origstr,'_{0}.txt'.format(add_on))
         add_on = add_on + 1
 
@@ -147,11 +133,12 @@ def main(args):
     g.write("ID\tWaveform\tPeriodMean\tPeriodStdDev\tPhaseMean\tPhaseStdDev\tNadirMean\tNadirStdDev\tMean\tStd_Dev\tMax\tMin\tMax_Amp\tFC\tIQR_FC\tNumBoots\tTauMean\tTauStdDev\n")
     g.close()
     time_original = time.time()
-    for serie in series:
+    for geneID in d_data_master:
+        serie = d_series[geneID]
+        #for serie in series:
         ### If we have an ID list, we only want to deal with data from it.
         if id_list!=[]:
-            if serie[0] not in id_list:
-                #print 'Passing'
+            if geneID not in id_list:
                 pass
         ### We have time limits here so we don't blow out the Midway allocation
         time_diff = time.time() - time_original
@@ -173,8 +160,6 @@ def main(args):
 
             s_stats = [smean,sstd,mmax,mmin,MAX_AMP,sFC,sIQR_FC,size]
 
-            ### The first line of the data is the geneID
-            geneID = serie[0] 
             ### Need to make this file if it doesn't exist already
             if 'premade' not in opt:
                 d_data_sub = {geneID:d_data_master[geneID]}
@@ -211,6 +196,23 @@ def main(args):
         with open(fn_remaining,'w') as g:
             for r in remaining:
                 g.write(r+'\n')
+
+def read_in_EMdata(fn):
+    """Reads in one of the two EM files """
+    WT = {}
+    with open(fn,'r') as f:
+        for line in f:
+            words = line.strip('\n').split()
+            if words[0]=='#':
+                header = words
+            else:
+                key = words[0]
+                m = [float(w) for w in words[1:7]]
+                s = [float(s) for s in words[7:]]
+                    
+                WT[key] = [m,s,np.ones(6)*5]
+    return WT
+
                 
 def get_stat_probs(dorder,new_header,periods,phases,widths):
     RealKen = KendallTauP()
@@ -356,16 +358,11 @@ def read_in(fn):
                     data.append(words)
     return header, data
 
-def organize_data(header,data):
-    """
-    Organize list of lists from such that genes with similar time-series holes match (for null distribution calc)
-    Return a header ['#','ZTX','ZTY'...] and a list of lists [ lists with similar holes (identical null distribution) , [],[],[]] 
-    """
-    L = data
-
-    for i in xrange(1,len(header)):
-        L=sorted(L, key=itemgetter(i))
-    return header,L
+def dict_data(data):
+    d_series = {}
+    for dat in data:
+        d_series[dat[0]] = dat
+    return d_series
 
 def generate_base_reference(header,waveform="cosine",period=24,phase=0,width=12):
     """
@@ -547,6 +544,21 @@ def get_series_data(data,id_list):
         if name in id_list:
             series = [float(da) for da in dat[1:]]
             d_data[name] = [np.mean(series),np.std(series),len(series)]
+    return d_data
+
+
+def get_series_data2(d_data_master,id_list):
+    d_data = {}
+    for key in d_data_master:
+        if key in id_list:
+            dataset = d_data_master[key]
+            N = np.sum(dataset[2])
+            length = len(dataset[0])
+            one = 1./N*np.sum([dataset[2][i]*(dataset[1][i]**2+dataset[0][i]**2) for i in xrange(length)])
+            two = (1./N * np.sum([dataset[2][i]*dataset[0][i] for i in xrange(length)]))**2
+            std = np.sqrt(one+two)
+            m = 1./N *np.sum([dataset[2][i]*dataset[0][i] for i in xrange(length)])
+            d_data[key] = [m,std,N]
     return d_data
 
 def eBayes(d_data,D_null={}):
