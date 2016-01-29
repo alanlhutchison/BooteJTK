@@ -155,56 +155,57 @@ def main(args):
         ### If we have an ID list, we only want to deal with data from it.
         ### We have time limits here so we don't blow out the Midway allocation
         time_diff = time.time() - time_original
-        if time_diff < time_limit_sec and geneID in id_list:
-            if fn=='DEFAULT' or EM==True:
-                mmax,mmin,MAX_AMP = np.nan,np.nan,np.nan
-                sIQR_FC = np.nan
-                smean = np.nan
-                sstd = np.nan
-                sFC = np.nan
-            else:
-                serie = d_series[geneID]                
-                mmax,mmin,MAX_AMP=series_char(serie)
-                sIQR_FC=IQR_FC(serie)
-                smean = series_mean(serie)
-                sstd = series_std(serie)
-                sFC = FC(serie)
+        if time_diff < time_limit_sec:
+            if geneID in id_list:
+                if fn=='DEFAULT' or EM==True:
+                    mmax,mmin,MAX_AMP = np.nan,np.nan,np.nan
+                    sIQR_FC = np.nan
+                    smean = np.nan
+                    sstd = np.nan
+                    sFC = np.nan
+                else:
+                    serie = d_series[geneID]                
+                    mmax,mmin,MAX_AMP=series_char(serie)
+                    sIQR_FC=IQR_FC(serie)
+                    smean = series_mean(serie)
+                    sstd = series_std(serie)
+                    sFC = FC(serie)
 
-            #local_ps = []
+                #local_ps = []
 
-            s_stats = [smean,sstd,mmax,mmin,MAX_AMP,sFC,sIQR_FC,size]
+                s_stats = [smean,sstd,mmax,mmin,MAX_AMP,sFC,sIQR_FC,size]
 
-            ### Need to make this file if it doesn't exist already
-            if 'premade' not in opt:
-                d_data_sub = {geneID:d_data_master[geneID]}
-                d_order_probs = get_order_prob(d_data_sub,size,reps)
-                f1 = open(fn_out_pkl,'ab')
-                pickle.dump([d_data_sub,d_order_probs],f1)
-                f1.close()
+                ### Need to make this file if it doesn't exist already
+                if 'premade' not in opt:
+                    d_data_sub = {geneID:d_data_master[geneID]}
+                    d_order_probs = get_order_prob(d_data_sub,size,reps)
+                    f1 = open(fn_out_pkl,'ab')
+                    pickle.dump([d_data_sub,d_order_probs],f1)
+                    f1.close()
 
-            #totals = np.array([complex(0,0),complex(0,0),complex(0,0),complex(0,0),complex(0,0)])
-            #d_tau[geneID] = {}
-            #d_ph[geneID] = {}
-            if geneID in d_order_probs:
-                #print geneID,'in d_order_probs'
-                out1,out2,d_taugene,d_phgene = get_stat_probs(d_order_probs[geneID],new_header,periods,phases,widths)
-                print out1,out2
-                out_line = [geneID,waveform]+out1+s_stats+out2
+                #totals = np.array([complex(0,0),complex(0,0),complex(0,0),complex(0,0),complex(0,0)])
+                #d_tau[geneID] = {}
+                #d_ph[geneID] = {}
+                if geneID in d_order_probs:
+                    #print geneID,'in d_order_probs'
+                    out1,out2,d_taugene,d_phgene = get_stat_probs(d_order_probs[geneID],new_header,periods,phases,widths)
+                    print out1,out2
+                    out_line = [geneID,waveform]+out1+s_stats+out2
 
-                out_line = [str(l) for l in out_line]
-                g = open(fn_out,'a')
-                g.write("\t".join(out_line)+"\n")
-                g.close()
-                print geneID
-                done.append(geneID)
-                sys.stdout.flush()
-        
-                pickle.dump([{geneID:d_taugene},{geneID:d_phgene}],open(fn_out_pkl_vars,'ab'))
-            #else:
-                #pprint 'Gene not in pkl',geneID
+                    out_line = [str(l) for l in out_line]
+                    g = open(fn_out,'a')
+                    g.write("\t".join(out_line)+"\n")
+                    g.close()
+                    print geneID
+                    done.append(geneID)
+                    sys.stdout.flush()
+
+                    pickle.dump([{geneID:d_taugene},{geneID:d_phgene}],open(fn_out_pkl_vars,'ab'))
+                #else:
+                    #pprint 'Gene not in pkl',geneID
         else:
-            remaining.append(serie[0])
-            #print 'Time is up'
+            remaining.append(geneID)
+            print 'Time is up'
     if len(remaining)>0:
         fn_remaining = fn_out.replace('.txt','_remaining_list.txt')
         with open(fn_remaining,'w') as g:
