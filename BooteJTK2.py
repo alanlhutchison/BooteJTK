@@ -55,12 +55,12 @@ def main(args):
 
     ### If not given a new name, name fn_out after the fn file
     if fn_out.split('/')[-1] == "DEFAULT":
-        endstr = '_boot{0}-rep{1}.txt'.format(int(np.log10(size)),int(reps))
+        endstr = '_{0}_boot{1}-rep{2}.txt'.format(prefix,int(np.log10(size)),int(reps))
         fn_out = fn.replace('.txt',endstr) if  ".txt" in fn else fn+endstr
         
     ### If not given a new name, name fn_out_pkl based on the fn file
     if fn_out_pkl.split('/')[-1] == 'DEFAULT':
-        endstr = '_boot{0}-rep{1}_order_probs.pkl'.format(int(np.log10(size)),int(reps))
+        endstr = '_{0}_boot{1}-rep{2}_order_probs.pkl'.format(prefix,int(np.log10(size)),int(reps))
         fn_out_pkl = fn.replace('.txt',endstr) if  ".txt" in fn else fn+endstr
 
     ### Name vars file based on pkl out file
