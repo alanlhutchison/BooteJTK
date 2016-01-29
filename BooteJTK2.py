@@ -43,7 +43,8 @@ def main(args):
     fn_list = args.id_list # This is the the list of ids to go through
     fn_null_list = args.null_list # These are geneIDs to be used to estimate the SD
     size = int(args.size)
-
+    reps = int(args.reps)
+    
     ### If no list file set id_list to empty
     id_list = read_in_list(fn_list) if fn_list.split('/')[-1]!='DEFAULT' else []
 
@@ -54,14 +55,17 @@ def main(args):
 
     ### If not given a new name, name fn_out after the fn file
     if fn_out.split('/')[-1] == "DEFAULT":
-        fn_out = fn.replace(".txt","_"+prefix+"_bootejtk.txt") if ".txt" in fn else fn+"_" +prefix + "_bootejtk.txt"
+        endstr = '_boot{0}-rep{1}.txt'.format(int(np.log10(size)),int(reps))
+        fn_out_pkl = fn.replace('.txt',endstr) if  ".txt" in fn else fn+endstr
         
     ### If not given a new name, name fn_out_pkl based on the fn file
     if fn_out_pkl.split('/')[-1] == 'DEFAULT':
-        fn_out_pkl = fn.replace('.txt','_boot{}_order_probs.pkl'.format(int(np.log10(size))))
+        endstr = '_boot{0}-rep{1}_order_probs.pkl'.format(int(np.log10(size)),int(reps))
+        fn_out_pkl = fn.replace('.txt',endstr) if  ".txt" in fn else fn+endstr
 
     ### Name vars file based on pkl out file
     fn_out_pkl_vars = fn_out_pkl.replace('.pkl','_vars.pkl') 
+
     EM = False
     assert fn.split('/')[-1]!='DEFAULT' or fn_out_pkl.split('/')[-1]!='DEFAULT'   
 
@@ -90,14 +94,23 @@ def main(args):
     elif 'premade' in opt:
         d_data_master,d_order_probs = open_pickle_append2(fn_out_pkl)
 
+    def add_on_out(outfile):
+        add_on = 1
+        while os.path.isfile(outfile):
+            print outfile, "already exists, take evasive action!!!"
+            if '.txt' in outfile:
+                end = '.txt'
+            elif '.pkl' in outfile:
+                end = '.pkl'
+            origstr = end if add_on==1 else '_{0}'.format(add_on-1)+end
+            outfile = outfile.replace(origstr,'_{0}'.format(add_on))+end
+            add_on = add_on + 1
+        return outfile
+    fn_out = add_on_out(fn_out)
+    fn_out_pkl = add_on_out(fn_out_pkl)
+    fn_out_pkl_vars = add_on_out(fn_out_pkl_vars)    
 
-    add_on = 1
-    while os.path.isfile(fn_out):
-        print fn_out, "already exists, take evasive action!!!"
-        origstr = '.txt' if add_on==1 else '_{0}.txt'.format(add_on-1)
-        fn_out = fn_out.replace(origstr,'_{0}.txt'.format(add_on))
-        add_on = add_on + 1
-
+    
     ### This is for the Hogen case ###
     #new_header = [0,2,4,6,8,10,12,14,16,18,20,22]
 
@@ -117,7 +130,7 @@ def main(args):
 
     
     print 'Pickled Orders'
-    waveform = []
+    waveform = 'cosine'
     Ps = []
     print 'Begin eJTK'
     #with open(fn_out,'w') as g:
@@ -127,14 +140,14 @@ def main(args):
     done = []
     remaining = []
     """Time Limit for Code to Run (in hours)"""
-    time_limit = 34
+    time_limit = 35
     time_limit_sec = float(60*60*time_limit)
     g = open(fn_out,'a')
     g.write("ID\tWaveform\tPeriodMean\tPeriodStdDev\tPhaseMean\tPhaseStdDev\tNadirMean\tNadirStdDev\tMean\tStd_Dev\tMax\tMin\tMax_Amp\tFC\tIQR_FC\tNumBoots\tTauMean\tTauStdDev\n")
     g.close()
     time_original = time.time()
     for geneID in d_data_master:
-        serie = d_series[geneID]
+
         #for serie in series:
         ### If we have an ID list, we only want to deal with data from it.
         if id_list!=[]:
@@ -143,13 +156,14 @@ def main(args):
         ### We have time limits here so we don't blow out the Midway allocation
         time_diff = time.time() - time_original
         if time_diff < time_limit_sec:
-            if fn=='DEFAULT':
+            if fn=='DEFAULT' or EM==True:
                 mmax,mmin,MAX_AMP = np.nan,np.nan,np.nan
                 sIQR_FC = np.nan
                 smean = np.nan
                 sstd = np.nan
                 sFC = np.nan
             else:
+                serie = d_series[geneID]                
                 mmax,mmin,MAX_AMP=series_char(serie)
                 sIQR_FC=IQR_FC(serie)
                 smean = series_mean(serie)
@@ -163,7 +177,7 @@ def main(args):
             ### Need to make this file if it doesn't exist already
             if 'premade' not in opt:
                 d_data_sub = {geneID:d_data_master[geneID]}
-                d_order_probs = get_order_prob(d_data_sub,size)
+                d_order_probs = get_order_prob(d_data_sub,size,reps)
                 f1 = open(fn_out_pkl,'ab')
                 pickle.dump([d_data_sub,d_order_probs],f1)
                 f1.close()
@@ -552,6 +566,7 @@ def get_series_data2(d_data_master,id_list):
     for key in d_data_master:
         if key in id_list:
             dataset = d_data_master[key]
+            #print key,datase
             N = np.sum(dataset[2])
             length = len(dataset[0])
             one = 1./N*np.sum([dataset[2][i]*(dataset[1][i]**2+dataset[0][i]**2) for i in xrange(length)])
@@ -613,25 +628,12 @@ def eBayes(d_data,D_null={}):
     print d0,s0
     return d_data
 
-def get_order_prob(d_data,size):
+def get_order_prob(d_data,size,reps):
     d_order_prob = {}
-    #print d_data.keys()
     for key in d_data:
         res = d_data[key]
-        d_order_prob[key]=dict_of_orders(res[0],res[1],res[2],size)
+        d_order_prob[key]=dict_of_orders(list(res[0])*reps,list(res[1])*reps,list(res[2])*reps,size)
     return d_order_prob
-
-def get_order_prob2(d_data,size):
-    d_order_prob = {}
-    #print d_data.keys()
-    for key in d_data:
-        res = d_data[key]
-        res[0] = list(res[0])+list(res[0])
-        res[1] = list(res[1])+list(res[1])
-        res[2] = list(res[2])+list(res[2])        
-        d_order_prob[key]=dict_of_orders(res[0],res[1],res[2],size)
-    return d_order_prob
-
 
 
 def dict_of_orders(M,SDS,NS,size):
@@ -741,9 +743,17 @@ def __create_parser__():
                           help="string to be inserted in the output filename for this run")
 
 
+    analysis.add_argument('-r',"--reps",
+                          dest="size",
+                          type=int,
+                          metavar="int",
+                          action='store',
+                          default="",
+                          help="# of reps of each time point to bootstrap (1 or 2, generally)")
+
     analysis.add_argument('-z',"--size",
                           dest="size",
-                          type=str,
+                          type=int,
                           metavar="int",
                           action='store',
                           default="",
