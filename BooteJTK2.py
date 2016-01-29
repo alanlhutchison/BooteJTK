@@ -744,7 +744,7 @@ def __create_parser__():
 
 
     analysis.add_argument('-r',"--reps",
-                          dest="size",
+                          dest="reps",
                           type=int,
                           metavar="int",
                           action='store',
