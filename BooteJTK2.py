@@ -51,12 +51,12 @@ def main(args):
     null_list = read_in_list(fn_null_list) if fn_null_list.split('/')[-1]!='DEFAULT' else []
         
     ### If no pkl out file, modify the option variable
-    opt = 'premade' if os.path.isfile(fn_out_pkl) else ''
+    opt = 'premade' if os.path.isfile(fn_out_pkl) and fn_out_pkl.split('/')[-1]!='DEFAULT' else ''
 
     ### If not given a new name, name fn_out after the fn file
     if fn_out.split('/')[-1] == "DEFAULT":
         endstr = '_boot{0}-rep{1}.txt'.format(int(np.log10(size)),int(reps))
-        fn_out_pkl = fn.replace('.txt',endstr) if  ".txt" in fn else fn+endstr
+        fn_out = fn.replace('.txt',endstr) if  ".txt" in fn else fn+endstr
         
     ### If not given a new name, name fn_out_pkl based on the fn file
     if fn_out_pkl.split('/')[-1] == 'DEFAULT':
@@ -86,7 +86,9 @@ def main(args):
         header,data = read_in(fn)
         d_series = dict_data(data)
         d_data_master,new_header = get_data(header,data)
-        print new_header
+
+
+    new_header = list(new_header)*reps
 
     if 'premade' not in opt:
         D_null = get_series_data2(d_data_master,null_list) if null_list!=[] else {}
@@ -146,16 +148,14 @@ def main(args):
     g.write("ID\tWaveform\tPeriodMean\tPeriodStdDev\tPhaseMean\tPhaseStdDev\tNadirMean\tNadirStdDev\tMean\tStd_Dev\tMax\tMin\tMax_Amp\tFC\tIQR_FC\tNumBoots\tTauMean\tTauStdDev\n")
     g.close()
     time_original = time.time()
-    for geneID in d_data_master:
 
-        #for serie in series:
+    id_list = d_data_master.keys() if id_list==[] else id_list
+    
+    for geneID in d_data_master:
         ### If we have an ID list, we only want to deal with data from it.
-        if id_list!=[]:
-            if geneID not in id_list:
-                pass
         ### We have time limits here so we don't blow out the Midway allocation
         time_diff = time.time() - time_original
-        if time_diff < time_limit_sec:
+        if time_diff < time_limit_sec and geneID in id_list:
             if fn=='DEFAULT' or EM==True:
                 mmax,mmin,MAX_AMP = np.nan,np.nan,np.nan
                 sIQR_FC = np.nan
