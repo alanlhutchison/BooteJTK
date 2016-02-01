@@ -154,9 +154,10 @@ def main(args):
     for geneID in d_data_master:
         ### If we have an ID list, we only want to deal with data from it.
         ### We have time limits here so we don't blow out the Midway allocation
-        time_diff = time.time() - time_original
-        if time_diff < time_limit_sec:
-            if geneID in id_list:
+        if geneID in id_list:
+            time_diff = time.time() - time_original
+            if time_diff < time_limit_sec:
+            
                 if fn=='DEFAULT' or EM==True:
                     mmax,mmin,MAX_AMP = np.nan,np.nan,np.nan
                     sIQR_FC = np.nan
@@ -203,14 +204,14 @@ def main(args):
                     pickle.dump([{geneID:d_taugene},{geneID:d_phgene}],open(fn_out_pkl_vars,'ab'))
                 #else:
                     #pprint 'Gene not in pkl',geneID
-        else:
-            remaining.append(geneID)
-            print 'Time is up'
-    if len(remaining)>0:
-        fn_remaining = fn_out.replace('.txt','_remaining_list.txt')
-        with open(fn_remaining,'w') as g:
-            for r in remaining:
-                g.write(r+'\n')
+            else:
+                remaining.append(geneID)
+                print 'Time is up'
+        if len(remaining)>0:
+            fn_remaining = fn_out.replace('.txt','_remaining_list.txt')
+            with open(fn_remaining,'w') as g:
+                for r in remaining:
+                    g.write(r+'\n')
 
 def read_in_EMdata(fn):
     """Reads in one of the two EM files """
@@ -242,8 +243,13 @@ def get_stat_probs(dorder,new_header,periods,phases,widths):
                     serie = kkey
                     reference = generate_base_reference(new_header,waveform,period,phase,width)
                     tau,p = generate_mod_series(reference,serie,RealKen)
-                    res.append([tau,p,period,phase,periodic(phase+width)])
-        r = sorted(res)[-1]
+
+                    maxloc = new_header[serie.index(max(serie))]
+                    minloc = new_header[serie.index(min(serie))]                    
+                    
+                    res.append([tau,p,period,phase,periodic(phase+width),maxloc,minloc])
+        r = pick_best_match(res)
+        #r = sorted(res)[-1]
         if r[0] not in d_taugene:
             d_taugene[r[0]] = 0
         d_taugene[r[0]]+=dorder[kkey]
@@ -291,7 +297,44 @@ def get_stat_probs(dorder,new_header,periods,phases,widths):
     out1,out2 = [per_mean,np.sqrt(per_var),ph_mean,np.sqrt(ph_var),nad_mean,np.sqrt(nad_var)],[tau_mean,np.sqrt(tau_var)]
     return out1,out2,d_taugene,d_phgene
 
-            
+
+def pick_best_match(res):
+    taus = [r[0] for r in res]
+    maxtau = max(taus)
+    tau_mask = np.array([maxtau==tau for tau in taus])
+    if np.sum(tau_mask)==1:
+        ind = list(tau_mask).index(True)
+        return res[ind]
+
+    res = np.array(res)[tau_mask]
+    phases = [np.abs(r[3]-r[5]) for r in res]
+    minphasediff = min(phases)
+    phasemask = np.array([minphasediff==phase for phase in phases])
+    if np.sum(phasemask)==1:
+        ind = list(phasemask).index(True)
+        return res[ind]
+
+    res = np.array(res)[phasemask]
+    diffs = [np.abs(r[4]-r[6]) for r in res]
+    mindiff = min(diffs)
+    diffmask = np.array([mindiff==diff for diff in diffs])
+    if np.sum(diffmask)==1:
+        ind = list(diffmask).index(True)
+        return res[ind]
+
+    ### If we've gotten down here everything has failed
+    print 'Ties remain...',res
+    return sorted(res)[-1]
+        
+
+        
+
+
+
+
+
+
+
 def rename(x):
     return x
 def open_pickle_append3(fn):
