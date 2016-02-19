@@ -47,7 +47,7 @@ def main(args):
     
     ### If no list file set id_list to empty
     id_list = read_in_list(fn_list) if fn_list.split('/')[-1]!='DEFAULT' else []
-
+    print id_list
     null_list = read_in_list(fn_null_list) if fn_null_list.split('/')[-1]!='DEFAULT' else []
         
     ### If no pkl out file, modify the option variable
@@ -89,7 +89,7 @@ def main(args):
 
 
     new_header = list(new_header)*reps
-
+    
     if 'premade' not in opt:
         D_null = get_series_data2(d_data_master,null_list) if null_list!=[] else {}
         d_data_master = eBayes(d_data_master,D_null)
@@ -154,6 +154,8 @@ def main(args):
     for geneID in d_data_master:
         ### If we have an ID list, we only want to deal with data from it.
         ### We have time limits here so we don't blow out the Midway allocation
+        print geneID,geneID in id_list
+
         if geneID in id_list:
             time_diff = time.time() - time_original
             if time_diff < time_limit_sec:
@@ -229,7 +231,16 @@ def read_in_EMdata(fn):
                 WT[key] = [m,s,np.ones(6)*5]
     return WT
 
-                
+
+def farctanh(x):
+    if x>0.99:
+        return np.arctanh(0.99)
+    elif x<-0.99:
+        return np.arctanh(-0.99)
+    else:
+        return np.arctanh(x)
+    
+
 def get_stat_probs(dorder,new_header,periods,phases,widths):
     RealKen = KendallTauP()
     waveform = 'cosine'
@@ -243,7 +254,7 @@ def get_stat_probs(dorder,new_header,periods,phases,widths):
                     serie = kkey
                     reference = generate_base_reference(new_header,waveform,period,phase,width)
                     tau,p = generate_mod_series(reference,serie,RealKen)
-
+                    tau = farctanh(tau)
                     maxloc = new_header[serie.index(max(serie))]
                     minloc = new_header[serie.index(min(serie))]                    
                     
@@ -274,6 +285,7 @@ def get_stat_probs(dorder,new_header,periods,phases,widths):
                     serie = kkey
                     reference = generate_base_reference(new_header,waveform,period,phase,width)
                     tau,p = generate_mod_series(reference,serie,RealKen)
+                    tau = farctanh(tau)
                     res.append([tau,p,period,phase,periodic(phase+width)])
         r = np.array(sorted(res)[-1],dtype=float)
         r[3] = r[3] * np.pi /12.
@@ -324,15 +336,7 @@ def pick_best_match(res):
 
     ### If we've gotten down here everything has failed
     print 'Ties remain...',res
-    return sorted(res)[-1]
-        
-
-        
-
-
-
-
-
+    return res[np.random.randint(len(res))]
 
 
 def rename(x):
@@ -355,6 +359,7 @@ def open_pickle_append3(fn):
         d1[new]=aa[0][aa[0].keys()[0]]
         d2[new]=aa[1][aa[1].keys()[0]]
         d3[new]=aa[2][aa[2].keys()[0]]
+    return d1,d2,d3
 
 def open_pickle_append2(fn):
     d = {}
