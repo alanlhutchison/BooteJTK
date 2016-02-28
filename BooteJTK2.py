@@ -47,7 +47,7 @@ def main(args):
     
     ### If no list file set id_list to empty
     id_list = read_in_list(fn_list) if fn_list.split('/')[-1]!='DEFAULT' else []
-    print id_list
+    #print id_list
     null_list = read_in_list(fn_null_list) if fn_null_list.split('/')[-1]!='DEFAULT' else []
         
     ### If no pkl out file, modify the option variable
@@ -154,7 +154,7 @@ def main(args):
     for geneID in d_data_master:
         ### If we have an ID list, we only want to deal with data from it.
         ### We have time limits here so we don't blow out the Midway allocation
-        print geneID,geneID in id_list
+        #print geneID,geneID in id_list
 
         if geneID in id_list:
             time_diff = time.time() - time_original
@@ -192,7 +192,7 @@ def main(args):
                 if geneID in d_order_probs:
                     #print geneID,'in d_order_probs'
                     out1,out2,d_taugene,d_phgene = get_stat_probs(d_order_probs[geneID],new_header,periods,phases,widths)
-                    print out1,out2
+                    #print out1,out2
                     out_line = [geneID,waveform]+out1+s_stats+out2
 
                     out_line = [str(l) for l in out_line]
@@ -471,18 +471,18 @@ def generate_base_reference(header,waveform="cosine",period=24,phase=0,width=12)
 def IQR_FC(series):
     qlo = __score_at_percentile__(series, 25)
     qhi = __score_at_percentile__(series, 75)
-    if (qlo=="NA" or qhi=="NA"):
-        return "NA"
+    if (qlo==np.nan or qhi==np.nan):
+        return np.nan
     elif (qhi==0):
         return 0
     elif ( qlo==0):
-        return "NA"
+        return np.nan
     else:
         iqr = qhi/qlo
         return iqr
 
 def FC(series):
-    series=[float(s) if s!="NA" else 0 for s in series[1:] if s!="NA"  ]
+    series=[float(s) if is_number(s) else 0 for s in series[1:]]
     if series!=[]:
         mmax = max(series)
         mmin = min(series)
@@ -491,13 +491,13 @@ def FC(series):
         else:
             sFC = mmax / mmin
     else:
-        sFC = "NA"
+        sFC = np.nan
     return sFC
 
 
 def series_char(series):
     """Uses interquartile range to estimate amplitude of a time series."""
-    series=[float(s) for s in series[1:] if s!="NA"]
+    series=[float(s) for s in series[1:] if is_number(s)]
     if series!=[]:
         mmax = max(series)
         mmin = min(series)
@@ -511,16 +511,16 @@ def series_char(series):
 
 def series_mean(series):
     """Finds the mean of a timeseries"""
-    series = [float(s) for s in series[1:] if s!="NA"]
+    series = [float(s) for s in series[1:] if is_number(s)]
     return np.mean(series)
 
 def series_std(series):
     """Finds the std dev of a timeseries"""
-    series = [float(s) for s in series[1:] if s!="NA"]
+    series = [float(s) for s in series[1:] if is_number(s)]
     return np.std(series)
 
 def __score_at_percentile__(ser, per):
-    ser = [float(se) for se in ser[1:] if se!="NA"]
+    ser = [float(se) for se in ser[1:] if is_number(se)]
     if len(ser)<5:
         score ="NA"
         return score
@@ -584,13 +584,13 @@ def get_data(header,data):
     d_data = {}
     for dat in data:
         name=dat[0]
-        series = [float(da) for da in dat[1:]]
+        series = [float(da) if is_number(da) else np.nan for da in dat[1:]]
         out = [[],[],[]]
         for i,s in enumerate(seen):
             points = [series[idx] for idx in dref[s]]
-            N = len(points)
-            m = np.mean(points)
-            std = np.std(points)
+            N = len([p for p in points if not np.isnan(p)])
+            m = np.nanmean(points)
+            std = np.nanstd(points)
             out[0].append(m)
             out[1].append(std)
             out[2].append(N)
@@ -700,8 +700,10 @@ def dict_of_orders(M,SDS,NS,size):
         d[key]=d[key]/SUM
     return d
 
-def dict_order_probs(ms,sds,ns,size=1000000):
-    sds = [sds[i]/np.sqrt(ns[i]) for i in xrange(len(sds))]
+def dict_order_probs(ms,sds,ns,size=1000000): 
+    ### RIGHT NOW AFTER EBAYES NS[i] is always 1, however, this division may be unnecessary
+    ### AND MAYBE SHOULD BE REMOVED FROM THIS PROCEDURE
+    sds = [sds[i]/np.sqrt(ns[i]) for i in xrange(len(sds))] 
     cov=np.diag(sds)
     A = mn(ms,cov)
     d = {}
