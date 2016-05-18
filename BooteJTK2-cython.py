@@ -33,8 +33,9 @@ import argparse
 import time
 import os.path
 
-from get_stat_probs1 import get_stat_probs as get_stat_probs
-
+from get_stat_probs import get_stat_probs as gsp_get_stat_probs
+from get_stat_probs import get_waveform_list as gsp_get_waveform_list
+from get_stat_probs import make_references as gsp_make_references
 
 def main(args):
     fn = args.filename
@@ -136,14 +137,18 @@ def main(args):
     #d_order_probs = get_order_prob2(d_data_master,size)
     #pickle.dump([d_data_master,d_order_probs], open(fn_out_pkl,'wb'))
     ### Read in lists of search parameters
-    waveforms = read_in_list(fn_waveform)
-    periods = np.array(read_in_list(fn_period),dtype=float)
-    phases = np.array(read_in_list(fn_phase),dtype=float)
-    widths = np.array(read_in_list(fn_width),dtype=float)
-    
+    #waveforms = read_in_list(fn_waveform)
+    periods = np.array(read_in_list(fn_period),dtype=int)
+    phases = np.array(read_in_list(fn_phase),dtype=int)
+    widths = np.array(read_in_list(fn_width),dtype=int)
+
+    waveform = 'cosine'
+
+    triples = gsp_get_waveform_list(periods,phases,widths)
+    dref = gsp_make_references(new_header,triples,waveform)
     # If BooteJTK2
     #new_header = list(new_header)+list(new_header)
-
+    
 
     
     print 'Pickled Orders'
@@ -207,7 +212,7 @@ def main(args):
                     #print geneID,'in d_order_probs'
                     #list_SDgene = get_SD_distr(d_data_master[geneID],new_header,size)
                     
-                    out1,out2,d_taugene,d_pergene,d_phgene,d_nagene = get_stat_probs(d_order_probs[geneID],new_header,periods,phases,widths,size)
+                    out1,out2,d_taugene,d_pergene,d_phgene,d_nagene = gsp_get_stat_probs(d_order_probs[geneID],new_header,triples,dref,size)#periods,phases,widths,size)
                     #print out1,out2
                     out_line = [geneID,waveform]+out1+s_stats+out2
 
