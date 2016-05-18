@@ -15,8 +15,10 @@ Please use ./BooteJTK -h to see the help screen for further instructions on runn
 """
 VERSION="0.1"
 
-import cmath
-import scipy.stats as ss
+#import cmath
+from scipy.stats import circmean as sscircmean
+from scipy.stats import circstd as sscircstd
+#import scipy.stats as ss
 import numpy as np
 from scipy.stats import kendalltau as kt
 from scipy.stats import multivariate_normal as mn
@@ -25,11 +27,14 @@ from scipy.stats import norm
 from scipy.special import polygamma
 
 import pickle
-from operator import itemgetter
+#from operator import itemgetter
 import sys
 import argparse
 import time
 import os.path
+
+from get_stat_probs1 import get_stat_probs as get_stat_probs
+
 
 def main(args):
     fn = args.filename
@@ -44,6 +49,16 @@ def main(args):
     fn_null_list = args.null_list # These are geneIDs to be used to estimate the SD
     size = int(args.size)
     reps = int(args.reps)
+
+
+    #    fn = 'example/TestInput5.txt'
+    #    prefix = 'TESTTEST'
+    #    fn_waveform = 'ref_files/waveform_cosine.txt'
+    #    fn_period = 'ref_files/period24.txt'
+    #    fn_phase = 'ref_files/phases_00-20_by4.txt'
+    #    fn_width = 'ref_files/asymmetry_12.txt'
+    #    size = 5
+    #    reps = 2
     
     ### If no list file set id_list to empty
     id_list = read_in_list(fn_list) if fn_list.split('/')[-1]!='DEFAULT' else []
@@ -155,7 +170,6 @@ def main(args):
         ### If we have an ID list, we only want to deal with data from it.
         ### We have time limits here so we don't blow out the Midway allocation
         #print geneID,geneID in id_list
-
         if geneID in id_list:
             time_diff = time.time() - time_original
             if time_diff < time_limit_sec:
@@ -258,87 +272,7 @@ def get_SD_distr(dseries,reps,size):
     
 
     
-def get_stat_probs(dorder,new_header,periods,phases,widths,size):
-    #RealKen = KendallTauP()
-    waveform = 'cosine'
-    d_taugene,d_pergene,d_phgene,d_nagene = {},{},{},{}
-    totals = np.array([complex(0,0),complex(0,0),complex(0,0),complex(0,0),complex(0,0)])
 
-    ### kkey is a sequence of ranks to have eJTK performed on them
-    ### dorder[kkey] is a probability of observing that sequence in the bootstraps
-    rs = []
-    for kkey in dorder:
-        res = []
-        for period in periods:
-            for phase in phases:
-                for width in widths:
-                    serie = kkey
-                    reference = generate_base_reference(new_header,waveform,period,phase,width)
-                    tau,p = generate_mod_series(reference,serie,RealKen)
-                    tau = farctanh(tau)
-                    maxloc = new_header[serie.index(max(serie))]
-                    minloc = new_header[serie.index(min(serie))]  
-                    
-                    res.append([tau,p,period,phase,periodic(phase+width),maxloc,minloc])
-        r = pick_best_match(res)
-        r = list(r)
-
-        d_taugene.setdefault(r[0],0)
-        d_taugene[r[0]]+=dorder[kkey]
-        
-        d_pergene.setdefault(r[2],0)
-        d_pergene[r[2]]+=dorder[kkey]
-
-        d_phgene.setdefault(r[3],0)
-        d_phgene[r[3]]+=dorder[kkey]
-
-        d_nagene.setdefault(r[4],0)
-        d_nagene[r[4]]+=dorder[kkey]
-
-        for _ in xrange(int(np.round(size*dorder[kkey]))):
-            rs.append(r)
-    rs = np.array(rs)
-    #print rs
-    m_tau = np.mean(rs[:,0])
-    s_tau = np.std(rs[:,0])
-    m_per = np.mean(rs[:,2])
-    s_per = np.std(rs[:,2])
-    m_ph = ss.circmean(rs[:,3],high=24,low=0)
-    s_ph = ss.circstd(rs[:,3],high=24,low=0)    
-    m_na = ss.circmean(rs[:,4],high=24,low=0)
-    s_na = ss.circstd(rs[:,4],high=24,low=0)    
-    out1,out2 = [m_per,s_per,m_ph,s_ph,m_na,s_na],[m_tau,s_tau]
-
-    return out1,out2,d_taugene,d_pergene,d_phgene,d_nagene
-
-
-def pick_best_match(res):
-    taus = [r[0] for r in res]
-    maxtau = max(taus)
-    tau_mask = np.array([maxtau==tau for tau in taus])
-    if np.sum(tau_mask)==1:
-        ind = list(tau_mask).index(True)
-        return res[ind]
-
-    res = np.array(res)[tau_mask]
-    phases = [np.abs(r[3]-r[5]) for r in res]
-    minphasediff = min(phases)
-    phasemask = np.array([minphasediff==phase for phase in phases])
-    if np.sum(phasemask)==1:
-        ind = list(phasemask).index(True)
-        return res[ind]
-
-    res = np.array(res)[phasemask]
-    diffs = [np.abs(r[4]-r[6]) for r in res]
-    mindiff = min(diffs)
-    diffmask = np.array([mindiff==diff for diff in diffs])
-    if np.sum(diffmask)==1:
-        ind = list(diffmask).index(True)
-        return res[ind]
-
-    ### If we've gotten down here everything has failed
-    print 'Ties remain...',res
-    return res[np.random.randint(len(res))]
 
 
 def rename(x):
@@ -429,45 +363,6 @@ def dict_data(data):
         d_series[dat[0]] = dat
     return d_series
 
-def generate_base_reference(header,waveform="cosine",period=24,phase=0,width=12):
-    """
-    This will generate a waveform with a given phase and period based on the header, 
-    """
-    #print header,phase
-    tpoints = []
-    ZTs = header
-    coef = 2.0 * np.pi / float(period)
-    w = float(width) * coef
-    for ZT in ZTs:
-        z = ZT
-        tpoints.append( (float(z)-float(phase) ) * coef)
-
-
-    def trough(x,w):
-        x = x % (2*np.pi)
-        w = w % (2*np.pi)
-        if x <= w:
-            y = 1 + -x/w
-        elif x > w:
-            y = (x-w)/(2*np.pi - w)
-        return y
-
-    def cosine(x,w):
-        x = x % (2*np.pi)
-        w = w % (2*np.pi)
-        if x <= w:
-            y = np.cos(x/(w/np.pi))
-        elif x > w:
-            y = np.cos( (x+2.*(np.pi-w))*np.pi/ (2*np.pi - w) )
-        return y
-
-
-    if waveform == "cosine":
-        reference=[cosine(tpoint,w) for tpoint in tpoints]
-    elif waveform == "trough":
-        reference=[trough(tpoint,w) for tpoint in tpoints]
-    return reference
-
 
 
 def IQR_FC(series):
@@ -536,36 +431,14 @@ def __score_at_percentile__(ser, per):
             score = interpolate(ser[int(i)], ser[int(i) + 1], i % 1)
         return float(score)
 
-def generate_mod_series(reference,series,RealKen):
+def generate_mod_series(reference,series):
     """
     Takes the series from generate_base_null, takes the list from data, and makes a null
     for each gene in data or uses the one previously calculated.
     Then it runs Kendall's Tau on the exp. series against the null
     """
-    values = series
-    binary = np.array([1.0 if value!="NA" else np.nan for value in values])
-    reference = np.array(reference)
-    temp = reference*binary
-    mod_reference = [value for value in temp if not np.isnan(value)]
-    mod_values = [float(value) for value in values if value!='NA']
-
-    if len(mod_values) < 3:
-        tau,p = np.nan,np.nan
-    elif mod_values.count(np.nan) == len(mod_values):
-        tau,p = np.nan,np.nan
-    elif mod_values.count(0) == len(mod_values):
-        tau,p = np.nan,np.nan
-    else:
-        tau,p=kt(mod_values,mod_reference)
-        if not np.isnan(tau):
-            if len(mod_values) < 150:
-                pk = RealKen.pval(tau,len(mod_values))
-                if pk is not None:
-                    p=pk
-            else:
-                p = p / 2.0
-                if tau < 0:
-                    p = 1-p
+    tau,p=kt(series,reference)
+    p = p / 2.0
     return tau,p
 
 ##################################
@@ -805,7 +678,7 @@ def __create_parser__():
                           type=int,
                           metavar="int",
                           action='store',
-                          default="",
+                          default=2,
                           help="# of reps of each time point to bootstrap (1 or 2, generally)")
 
     analysis.add_argument('-z',"--size",
@@ -813,7 +686,7 @@ def __create_parser__():
                           type=int,
                           metavar="int",
                           action='store',
-                          default="",
+                          default=50,
                           help="Number of bootstraps to be performed")
     
 
@@ -868,114 +741,6 @@ def __create_parser__():
     
     return p
 
-
-# instantiate class to precalculate distribution
-# usage: 
-#   K = KendallTauP()
-#   pval = K.pval(tau,n,two_tailed=True)
-class KendallTauP:
-    def __init__(self,N=150):        
-        # largest number of samples to precompute
-        self.N = N
-        Nint = self.N*(self.N-1)/2
-
-        # first allocate freq slots for largest sample array
-        # as we fill this in we'll save the results for smaller samples
-
-        # total possible number of inversions is Nint + 1
-        freqN = np.zeros(Nint + 1)
-        freqN[0] = 1.0
-
-        # save results at each step in freqs array
-        self.freqs = [np.array([1.0])]
-        for i in xrange(1,self.N):
-            last = np.copy(freqN)
-            for j in xrange(Nint+1):
-                # update each entry by summing over i entries to the left
-                freqN[j] += sum(last[max(0,j-i):j])
-            # copy current state into freqs array
-            # the kth entry of freqs should have 1+k*(k-1)/2 entries
-            self.freqs.append(np.copy(freqN[0:(1+(i+1)*i/2)]))
-            
-        # turn freqs into cdfs
-        # distributions still with respect to number of inversions
-        self.cdfs = []
-        for i in xrange(self.N):
-            self.cdfs.append(np.copy(self.freqs[i]))
-            # turn into cumulative frequencies
-            for j in xrange(1,len(self.freqs[i])):
-                self.cdfs[i][j] += self.cdfs[i][j-1]
-            # convert freqs to probs
-            self.cdfs[i] = self.cdfs[i]/sum(self.freqs[i])
-            
-    # plot exact distribution compared to normal approx
-    def plot(self,nlist):
-        colors = cm.Set1(np.linspace(0,1,len(nlist)))
-
-        # for plotting gaussian
-        x = np.linspace(-1.2,1.2,300)
-        # plot pdfs
-        plt.figure()
-        for i in xrange(len(nlist)):
-            ntot = len(self.freqs[nlist[i]-1])-1
-            tauvals = (ntot - 2.0*np.arange(len(self.freqs[nlist[i]-1])))/ntot
-            probs = ((ntot+1.0)/2.0)*self.freqs[nlist[i]-1]/sum(self.freqs[nlist[i]-1])
-            plt.scatter(tauvals,probs,color=colors[i])
-            # now plot gaussian comparison
-            var = 2.0*(2.0*nlist[i]+5.0)/(nlist[i]*(nlist[i]-1)*9.0)
-            plt.plot(x,norm.pdf(x,0.0,np.sqrt(var)),color=colors[i])
-        plt.legend(nlist,loc='best')
-        # plt.savefig('pdfs.png')
-        plt.show()
-
-        # now plot cdfs
-        plt.figure()
-        for i in xrange(len(nlist)):
-            ntot = len(self.freqs[nlist[i]-1])-1
-            tauvals = -1.0*(ntot - 2.0*np.arange(len(self.freqs[nlist[i]-1])))/ntot
-            probs = self.cdfs[nlist[i]-1]
-            plt.scatter(tauvals,probs,color=colors[i])
-            # now plot gaussian comparison
-            var = 2.0*(2.0*nlist[i]+5.0)/(nlist[i]*(nlist[i]-1)*9.0)
-            plt.plot(x,norm.cdf(x,0.0,np.sqrt(var)),color=colors[i])
-        plt.legend(nlist,loc='best')
-        # plt.savefig('cdfs.png')
-        plt.show()
-
-    # use cdfs to return pval
-    # default to return two tailed pval
-    def pval(self,tau,n,two_tailed=False):
-        # enforce tau is between -1 and 1
-        if tau <= -1.000001 or tau >= 1.000001:
-            sys.stderr.write(str(type(tau))+"\n")
-            sys.stderr.write(str(tau)+"\n")
-            sys.stderr.write("invalid tau\n")
-            #print 'invalid tau'
-            return None
-        # enforce n is less than our precomputed quantities
-        if n > self.N:
-            #print 'n is too large'
-            sys.stderr.write("n is too large/n")
-            return None
-
-        # convert tau to value in terms of number of inversions
-        ntot = n*(n-1)/2
-        inv_score = int(round((ntot - tau * ntot)/2.0))
-        # I'm a little worried about the precision of this,
-        # but probably not enough to be really worried for reasonable n
-        # since we really only need precision to resolve ntot points
-
-        # if two tailed, we're getting a tail from a symmetric dist
-        min_inv_score = min(inv_score,ntot-inv_score)
-
-        if two_tailed:
-            pval = self.cdfs[n-1][min_inv_score]*2.0
-        else:
-            # if one tailed return prob of getting that or fewer inversions
-            pval = self.cdfs[n-1][inv_score]
-
-        # if inv_score is 0, might have larger than 0.5 prob
-        return min(pval,1.0)
 
 
 
