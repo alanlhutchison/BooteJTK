@@ -55,12 +55,12 @@ def main(args):
 
     ### If not given a new name, name fn_out after the fn file
     if fn_out.split('/')[-1] == "DEFAULT":
-        endstr = '_{0}_boot{1}-rep{2}.txt'.format(prefix,int(np.log10(size)),int(reps))
+        endstr = '_{0}_boot{1}-rep{2}.txt'.format(prefix,int(size),int(reps))
         fn_out = fn.replace('.txt',endstr) if  ".txt" in fn else fn+endstr
         
     ### If not given a new name, name fn_out_pkl based on the fn file
     if fn_out_pkl.split('/')[-1] == 'DEFAULT':
-        endstr = '_{0}_boot{1}-rep{2}_order_probs.pkl'.format(prefix,int(np.log10(size)),int(reps))
+        endstr = '_{0}_boot{1}-rep{2}_order_probs.pkl'.format(prefix,int(size),int(reps))
         fn_out_pkl = fn.replace('.txt',endstr) if  ".txt" in fn else fn+endstr
 
     ### Name vars file based on pkl out file
@@ -79,7 +79,7 @@ def main(args):
     ### If we already have the PKL file, we just need a place to put the header information
     elif fn.split('/')[-1]=='DEFAULT' and fn_out_pkl.split('/')[-1]!='DEFAULT':
         d_series = dict(zip([key for key in d_data_master.keys()],[[]*len(d_data_master)]))
-        fn_out= fn_out_pkl.replace('.pkl','_{0}-bootejtk.txt'.format(int(np.log10(size))))
+        fn_out= fn_out_pkl.replace('.pkl','_{0}-bootejtk.txt'.format(int(size)))
         new_header = [0,4,8,12,16,20,0,4,8,12,16,20] if fn_out_pkl[:-4]=='2.pkl' else [0,4,8,12,16,20]
     ### If we have the initial data we can get it 
     elif fn.split('/')[-1]!='DEFAULT':
@@ -191,7 +191,9 @@ def main(args):
                 #d_ph[geneID] = {}
                 if geneID in d_order_probs:
                     #print geneID,'in d_order_probs'
-                    out1,out2,d_taugene,d_phgene = get_stat_probs(d_order_probs[geneID],new_header,periods,phases,widths)
+                    #list_SDgene = get_SD_distr(d_data_master[geneID],new_header,size)
+                    
+                    out1,out2,d_taugene,d_pergene,d_phgene,d_nagene = get_stat_probs(d_order_probs[geneID],new_header,periods,phases,widths,size)
                     #print out1,out2
                     out_line = [geneID,waveform]+out1+s_stats+out2
 
@@ -202,8 +204,8 @@ def main(args):
                     print geneID
                     done.append(geneID)
                     sys.stdout.flush()
-
                     pickle.dump([{geneID:d_taugene},{geneID:d_phgene}],open(fn_out_pkl_vars,'ab'))
+                    #pickle.dump([{geneID:d_taugene},{geneID:d_phgene},{geneID:list_SDgene}],open(fn_out_pkl_vars,'ab'))
                 #else:
                     #pprint 'Gene not in pkl',geneID
             else:
@@ -228,7 +230,7 @@ def read_in_EMdata(fn):
                 m = [float(w) for w in words[1:7]]
                 s = [float(s) for s in words[7:]]
                     
-                WT[key] = [m,s,np.ones(6)*5]
+                WT[key] = [m,s,np.ones(6)*3]
     return WT
 
 
@@ -241,11 +243,30 @@ def farctanh(x):
         return np.arctanh(x)
     
 
-def get_stat_probs(dorder,new_header,periods,phases,widths):
+def get_SD_distr(dseries,reps,size):
+    data = np.zeros(size)
+    for j in xrange(size):
+        ser = []
+        for i in xrange(len(dseries[0])):
+            ser.append(np.random.normal(dseries[0][i],dseries[1][i],size=reps))
+        ser = np.concatenate(ser)
+        SD = np.std(ser)
+        data[j] = SD
+    return data
+
+    
+    
+
+    
+def get_stat_probs(dorder,new_header,periods,phases,widths,size):
     RealKen = KendallTauP()
     waveform = 'cosine'
-    d_taugene,d_phgene = {},{}
+    d_taugene,d_pergene,d_phgene,d_nagene = {},{},{},{}
     totals = np.array([complex(0,0),complex(0,0),complex(0,0),complex(0,0),complex(0,0)])
+
+    ### kkey is a sequence of ranks to have eJTK performed on them
+    ### dorder[kkey] is a probability of observing that sequence in the bootstraps
+    rs = []
     for kkey in dorder:
         res = []
         for period in np.array(periods,dtype=float):
@@ -256,58 +277,47 @@ def get_stat_probs(dorder,new_header,periods,phases,widths):
                     tau,p = generate_mod_series(reference,serie,RealKen)
                     tau = farctanh(tau)
                     maxloc = new_header[serie.index(max(serie))]
-                    minloc = new_header[serie.index(min(serie))]                    
+                    minloc = new_header[serie.index(min(serie))]  
                     
                     res.append([tau,p,period,phase,periodic(phase+width),maxloc,minloc])
         r = pick_best_match(res)
-        #r = sorted(res)[-1]
+        r = list(r)
         if r[0] not in d_taugene:
             d_taugene[r[0]] = 0
         d_taugene[r[0]]+=dorder[kkey]
+        
+        if r[2] not in d_pergene:
+            d_pergene[r[2]] = 0
+        d_pergene[r[2]]+=dorder[kkey]
 
         if r[3] not in d_phgene:
             d_phgene[r[3]] = 0
         d_phgene[r[3]]+=dorder[kkey]
 
-        r[3] = r[3] * np.pi /12.
-        r[4] = r[4] * np.pi /12.
-        r=np.array([r[0],r[1],r[2],complex(np.cos(r[3]),np.sin(r[3])),complex(np.cos(r[4]),np.sin(r[4]))])
-        sub = r*dorder[kkey]
-        totals+= sub
-    m = totals
-    m = np.array([m[0].real,m[1].real,m[2].real,cmath.phase(m[3]),cmath.phase(m[4])],dtype=float)*np.array([1,1,1,12/np.pi,12/np.pi])
-    cos_sum1,sin_sum1,cos_sum2,sin_sum2,tau_var,p_var,per_var = 0.,0.,0.,0.,0.,0.,0.            
-    for kkey in dorder:
-        res = []
-        for period in periods:
-            for phase in phases:
-                for width in widths:
-                    serie = kkey
-                    reference = generate_base_reference(new_header,waveform,period,phase,width)
-                    tau,p = generate_mod_series(reference,serie,RealKen)
-                    tau = farctanh(tau)
-                    res.append([tau,p,period,phase,periodic(phase+width)])
-        r = np.array(sorted(res)[-1],dtype=float)
-        r[3] = r[3] * np.pi /12.
-        r[4] = r[4] * np.pi /12.
-        tau_var+=(r[0]-float(m[0]))*(r[0]-float(m[0]))*dorder[kkey]
-        p_var+=(r[1]-float(m[1]))*(r[1]-float(m[1]))*dorder[kkey]
-        per_var+=(r[2]-float(m[2]))*(r[2]-float(m[2]))*dorder[kkey]
-        cos_sum1+=(np.cos(r[3])*dorder[kkey])
-        sin_sum1+=(np.sin(r[3])*dorder[kkey])
-        cos_sum2+=(np.cos(r[4])*dorder[kkey])
-        sin_sum2+=(np.sin(r[4])*dorder[kkey])   
+        if r[4] not in d_nagene:
+            d_nagene[r[4]] = 0
+        d_nagene[r[4]]+=dorder[kkey]
 
-    ph_var=(1.-np.sqrt(cos_sum1**2 + sin_sum1**2))*24.
-    nad_var=(1.-np.sqrt(cos_sum2**2 + sin_sum2**2))*24.
-    tau_mean = m[0]
-    p_mean = m[1]
-    per_mean = m[2]
-    ph_mean = m[3]
-    nad_mean = m[4]
+        #print dorder[kkey]
+        #print size
+        #print int(np.round(size*dorder[kkey]))
+        #print r*int(np.round(size*dorder[kkey]))
+        #print r
+        for _ in xrange(int(np.round(size*dorder[kkey]))):
+            rs.append(r)
+    rs = np.array(rs)
+    #print rs
+    m_tau = np.mean(rs[:,0])
+    s_tau = np.std(rs[:,0])
+    m_per = np.mean(rs[:,2])
+    s_per = np.std(rs[:,2])
+    m_ph = ss.circmean(rs[:,3],high=24,low=0)
+    s_ph = ss.circstd(rs[:,3],high=24,low=0)    
+    m_na = ss.circmean(rs[:,4],high=24,low=0)
+    s_na = ss.circstd(rs[:,4],high=24,low=0)    
+    out1,out2 = [m_per,s_per,m_ph,s_ph,m_na,s_na],[m_tau,s_tau]
 
-    out1,out2 = [per_mean,np.sqrt(per_var),ph_mean,np.sqrt(ph_var),nad_mean,np.sqrt(nad_var)],[tau_mean,np.sqrt(tau_var)]
-    return out1,out2,d_taugene,d_phgene
+    return out1,out2,d_taugene,d_pergene,d_phgene,d_nagene
 
 
 def pick_best_match(res):
@@ -573,6 +583,7 @@ def generate_mod_series(reference,series,RealKen):
 def get_data(header,data):
     new_h = [float(h[2:])%24 for h in header]
     print new_h
+    length = len(new_h)
     seen = []
     dref = {}
     for i,h in enumerate(new_h):
@@ -582,20 +593,22 @@ def get_data(header,data):
         else:
             dref[h].append(i)
     d_data = {}
+    print dref
     for dat in data:
         name=dat[0]
         series = [float(da) if is_number(da) else np.nan for da in dat[1:]]
-        out = [[],[],[]]
-        for i,s in enumerate(seen):
-            points = [series[idx] for idx in dref[s]]
-            N = len([p for p in points if not np.isnan(p)])
-            m = np.nanmean(points)
-            std = np.nanstd(points)
-            out[0].append(m)
-            out[1].append(std)
-            out[2].append(N)
-        #print name,seen,out
-        d_data[name]=out
+        if len(series)==length:
+            out = [[],[],[]]
+            for i,s in enumerate(seen):
+                points = [series[idx] for idx in dref[s]]
+                N = len([p for p in points if not np.isnan(p)])
+                m = np.nanmean(points)
+                std = np.nanstd(points)
+                out[0].append(m)
+                out[1].append(std)
+                out[2].append(N)
+            #print name,seen,out
+            d_data[name]=out
     #print d_data.keys()
     return d_data,seen
 
@@ -652,7 +665,8 @@ def eBayes(d_data,D_null={}):
         else:
             dg = np.hstack(np.array(d_data.values())[:,2])
             s  = np.hstack(np.array(d_data.values())[:,1])
-
+        #print D_null.keys()    
+        #print dg,s
         G = len(d_data)
         s2 = np.array([ss for ss in s if ss!=0])
         dg2 = np.array([dg[i] for i,ss in enumerate(s) if ss!=0])
