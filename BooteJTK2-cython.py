@@ -20,7 +20,7 @@ from scipy.stats import circmean as sscircmean
 from scipy.stats import circstd as sscircstd
 #import scipy.stats as ss
 import numpy as np
-from scipy.stats import kendalltau as kt
+#from scipy.stats import kendalltau as kt
 from scipy.stats import multivariate_normal as mn
 from scipy.stats import rankdata
 from scipy.stats import norm
@@ -36,8 +36,11 @@ import os.path
 from get_stat_probs import get_stat_probs as gsp_get_stat_probs
 from get_stat_probs import get_waveform_list as gsp_get_waveform_list
 from get_stat_probs import make_references as gsp_make_references
-
+from get_stat_probs import  kt ### this is kendalltau
 def main(args):
+
+
+
     fn = args.filename
     prefix = args.prefix
     fn_waveform = args.waveform
