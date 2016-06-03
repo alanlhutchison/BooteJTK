@@ -170,7 +170,7 @@ def get_waveform_list(periods,phases,widths):
     cdef int lpha = len(phases)
     cdef int lwid = len(widths)
     #cdef np.ndarray
-    triples = np.zeros((lper*lpha*lwid/2,3))
+    triples = np.zeros((int(lper*lpha*lwid/2),3))
     cdef int i,j
     cdef int period,phase,width,nadir
 
@@ -190,7 +190,7 @@ def get_waveform_list(periods,phases,widths):
                 if pair not in pairs:
                     #print 'Adding', phase,nadir
                     pairs[j] = [phase,nadir]
-                    triples[i*lper+j] = np.array([period,phase,width])
+                    triples[int(i*lper+j)] = np.array([period,phase,width])
                     j+=1
         #for pair in pairs:
         #    print pair

@@ -148,11 +148,13 @@ def main(args):
     waveform = 'cosine'
 
     triples = gsp_get_waveform_list(periods,phases,widths)
+    #print triples
     dref = gsp_make_references(new_header,triples,waveform)
     # If BooteJTK2
     #new_header = list(new_header)+list(new_header)
     
-
+    d_data_master1 = {}
+    d_order_probs_master = {}
     
     print 'Pickled Orders'
     waveform = 'cosine'
@@ -173,8 +175,9 @@ def main(args):
     time_original = time.time()
 
     id_list = d_data_master.keys() if id_list==[] else id_list
-    
+    out_lines = []
     for geneID in d_data_master:
+
         ### If we have an ID list, we only want to deal with data from it.
         ### We have time limits here so we don't blow out the Midway allocation
         #print geneID,geneID in id_list
@@ -202,11 +205,15 @@ def main(args):
 
                 ### Need to make this file if it doesn't exist already
                 if 'premade' not in opt:
+
                     d_data_sub = {geneID:d_data_master[geneID]}
+                    d_data_master1 = dict(d_data_master1.items()+d_data_sub.items())
+                    
                     d_order_probs = get_order_prob(d_data_sub,size,reps)
-                    f1 = open(fn_out_pkl,'ab')
-                    pickle.dump([d_data_sub,d_order_probs],f1)
-                    f1.close()
+                    d_order_probs_master = dict(d_order_probs_master.items()+d_order_probs.items())
+                    #f1 = open(fn_out_pkl,'ab')
+                    #pickle.dump([d_data_sub,d_order_probs],f1)
+                    #f1.close()
 
                 #totals = np.array([complex(0,0),complex(0,0),complex(0,0),complex(0,0),complex(0,0)])
                 #d_tau[geneID] = {}
@@ -218,26 +225,33 @@ def main(args):
                     out1,out2,d_taugene,d_pergene,d_phgene,d_nagene = gsp_get_stat_probs(d_order_probs[geneID],new_header,triples,dref,size)#periods,phases,widths,size)
                     #print out1,out2
                     out_line = [geneID,waveform]+out1+s_stats+out2
-
                     out_line = [str(l) for l in out_line]
-                    g = open(fn_out,'a')
-                    g.write("\t".join(out_line)+"\n")
-                    g.close()
-                    print geneID
+                    out_lines.append(out_line)
+                    #print geneID
                     done.append(geneID)
-                    sys.stdout.flush()
-                    pickle.dump([{geneID:d_taugene},{geneID:d_phgene}],open(fn_out_pkl_vars,'ab'))
+                    #sys.stdout.flush()
+                    
+                    d_tau = dict(d_tau.items()+{geneID:d_taugene}.items())
+                    d_ph = dict(d_ph.items()+{geneID:d_phgene}.items())
+                    #pickle.dump([{geneID:d_taugene},{geneID:d_phgene}],open(fn_out_pkl_vars,'ab'))
                     #pickle.dump([{geneID:d_taugene},{geneID:d_phgene},{geneID:list_SDgene}],open(fn_out_pkl_vars,'ab'))
                 #else:
                     #pprint 'Gene not in pkl',geneID
             else:
                 remaining.append(geneID)
                 print 'Time is up'
+        
         if len(remaining)>0:
             fn_remaining = fn_out.replace('.txt','_remaining_list.txt')
             with open(fn_remaining,'w') as g:
                 for r in remaining:
                     g.write(r+'\n')
+    pickle.dump([d_tau,d_ph],open(fn_out_pkl_vars,'wb'))                    
+    pickle.dump([d_data_master1,d_order_probs_master],open(fn_out_pkl,'wb'))
+    g = open(fn_out,'a')
+    for out_line in out_lines:
+        g.write("\t".join(out_line)+"\n")
+    g.close()
 
 def read_in_EMdata(fn):
     """Reads in one of the two EM files """
