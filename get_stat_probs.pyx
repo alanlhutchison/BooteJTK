@@ -1,4 +1,4 @@
-from __future__ import division, absolute_import# print_function, absolute_import
+from __future__ import division#, absolute_import# print_function, absolute_import
 
 #import warnings
 #import math
@@ -29,9 +29,9 @@ def get_stat_probs(dorder,new_header,triples,dref,int size):
     cdef double period,phase,width,nadir
     cdef double tau,p
     cdef double m_tau,s_tau,m_per,s_per,m_ph,s_ph,m_na,s_na
-    cdef double[6] out1
-    cdef double[2] out2
-    cdef double[2] pair
+    cdef out1
+    cdef out2
+    cdef pair
     #cdef cnp.ndarray pairs = np.zeros((len(phases)*len(widths),2))
     cdef str waveform = 'cosine'
     cdef int i,j
