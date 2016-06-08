@@ -54,16 +54,6 @@ def main(args):
     size = int(args.size)
     reps = int(args.reps)
 
-
-    #    fn = 'example/TestInput5.txt'
-    #    prefix = 'TESTTEST'
-    #    fn_waveform = 'ref_files/waveform_cosine.txt'
-    #    fn_period = 'ref_files/period24.txt'
-    #    fn_phase = 'ref_files/phases_00-20_by4.txt'
-    #    fn_width = 'ref_files/asymmetry_12.txt'
-    #    size = 5
-    #    reps = 2
-    
     ### If no list file set id_list to empty
     id_list = read_in_list(fn_list) if fn_list.split('/')[-1]!='DEFAULT' else []
     #print id_list
@@ -89,8 +79,6 @@ def main(args):
     assert fn.split('/')[-1]!='DEFAULT' or fn_out_pkl.split('/')[-1]!='DEFAULT'   
 
 
-
-
     if fn.split('/')[-1][:2]=='EM':
         EM = True
         new_header = [0,4,8,12,16,20]
@@ -110,10 +98,10 @@ def main(args):
     new_header = list(new_header)*reps
     
     if 'premade' not in opt:
-        D_null = get_series_data2(d_data_master,null_list) if null_list!=[] else {}
+        D_null = get_series_data(d_data_master,null_list) if null_list!=[] else {}
         d_data_master = eBayes(d_data_master,D_null)
     elif 'premade' in opt:
-        d_data_master,d_order_probs = open_pickle_append2(fn_out_pkl)
+        d_data_master,d_order_probs = pickle.load(open(fn_out_pkl,'rb'))
 
     def add_on_out(outfile):
         add_on = 1
@@ -131,16 +119,6 @@ def main(args):
     fn_out_pkl = add_on_out(fn_out_pkl)
     fn_out_pkl_vars = add_on_out(fn_out_pkl_vars)    
 
-    
-    ### This is for the Hogen case ###
-    #new_header = [0,2,4,6,8,10,12,14,16,18,20,22]
-
-    
-    #for key in d_data_master:
-    #d_order_probs = get_order_prob2(d_data_master,size)
-    #pickle.dump([d_data_master,d_order_probs], open(fn_out_pkl,'wb'))
-    ### Read in lists of search parameters
-    #waveforms = read_in_list(fn_waveform)
     periods = np.array(read_in_list(fn_period),dtype=int)
     phases = np.array(read_in_list(fn_phase),dtype=int)
     widths = np.array(read_in_list(fn_width),dtype=int)
@@ -148,10 +126,8 @@ def main(args):
     waveform = 'cosine'
 
     triples = gsp_get_waveform_list(periods,phases,widths)
-    #print triples
+
     dref = gsp_make_references(new_header,triples,waveform)
-    # If BooteJTK2
-    #new_header = list(new_header)+list(new_header)
     
     d_data_master1 = {}
     d_order_probs_master = {}
@@ -160,83 +136,61 @@ def main(args):
     waveform = 'cosine'
     Ps = []
     print 'Begin eJTK'
-    #with open(fn_out,'w') as g:
+
     d_tau = {}
     d_ph = {}
-    #if 1:
+
     done = []
     remaining = []
     """Time Limit for Code to Run (in hours)"""
-    time_limit = 35
-    time_limit_sec = float(60*60*time_limit)
-    time_original = time.time()
+    #time_limit = 35
+    #time_limit_sec = float(60*60*time_limit)
+    #time_original = time.time()
 
     id_list = d_data_master.keys() if id_list==[] else id_list
     out_lines = []
     for geneID in d_data_master:
-
         ### If we have an ID list, we only want to deal with data from it.
-        ### We have time limits here so we don't blow out the Midway allocation
-        #print geneID,geneID in id_list
         if geneID in id_list:
-            time_diff = time.time() - time_original
-            if time_diff < time_limit_sec:
             
-                if fn=='DEFAULT' or EM==True:
-                    mmax,mmin,MAX_AMP = np.nan,np.nan,np.nan
-                    sIQR_FC = np.nan
-                    smean = np.nan
-                    sstd = np.nan
-                    sFC = np.nan
-                else:
-                    serie = d_series[geneID]                
-                    mmax,mmin,MAX_AMP=series_char(serie)
-                    sIQR_FC=IQR_FC(serie)
-                    smean = series_mean(serie)
-                    sstd = series_std(serie)
-                    sFC = FC(serie)
-
-                #local_ps = []
-
-                s_stats = [smean,sstd,mmax,mmin,MAX_AMP,sFC,sIQR_FC,size]
-
-                ### Need to make this file if it doesn't exist already
-                if 'premade' not in opt:
-
-                    d_data_sub = {geneID:d_data_master[geneID]}
-                    d_data_master1 = dict(d_data_master1.items()+d_data_sub.items())
-                    
-                    d_order_probs = get_order_prob(d_data_sub,size,reps)
-                    d_order_probs_master = dict(d_order_probs_master.items()+d_order_probs.items())
-                    #f1 = open(fn_out_pkl,'ab')
-                    #pickle.dump([d_data_sub,d_order_probs],f1)
-                    #f1.close()
-
-                #totals = np.array([complex(0,0),complex(0,0),complex(0,0),complex(0,0),complex(0,0)])
-                #d_tau[geneID] = {}
-                #d_ph[geneID] = {}
-                if geneID in d_order_probs:
-                    #print geneID,'in d_order_probs'
-                    #list_SDgene = get_SD_distr(d_data_master[geneID],new_header,size)
-                    
-                    out1,out2,d_taugene,d_pergene,d_phgene,d_nagene = gsp_get_stat_probs(d_order_probs[geneID],new_header,triples,dref,size)#periods,phases,widths,size)
-                    #print out1,out2
-                    out_line = [geneID,waveform]+out1+s_stats+out2
-                    out_line = [str(l) for l in out_line]
-                    out_lines.append(out_line)
-                    #print geneID
-                    done.append(geneID)
-                    #sys.stdout.flush()
-                    
-                    d_tau = dict(d_tau.items()+{geneID:d_taugene}.items())
-                    d_ph = dict(d_ph.items()+{geneID:d_phgene}.items())
-                    #pickle.dump([{geneID:d_taugene},{geneID:d_phgene}],open(fn_out_pkl_vars,'ab'))
-                    #pickle.dump([{geneID:d_taugene},{geneID:d_phgene},{geneID:list_SDgene}],open(fn_out_pkl_vars,'ab'))
-                #else:
-                    #pprint 'Gene not in pkl',geneID
+            if fn=='DEFAULT' or EM==True:
+                mmax,mmin,MAX_AMP = np.nan,np.nan,np.nan
+                sIQR_FC = np.nan
+                smean = np.nan
+                sstd = np.nan
+                sFC = np.nan
             else:
-                remaining.append(geneID)
-                print 'Time is up'
+                serie = d_series[geneID]                
+                mmax,mmin,MAX_AMP=series_char(serie)
+                sIQR_FC=IQR_FC(serie)
+                smean = series_mean(serie)
+                sstd = series_std(serie)
+                sFC = FC(serie)
+
+            s_stats = [smean,sstd,mmax,mmin,MAX_AMP,sFC,sIQR_FC,size]
+
+            ### Need to make this file if it doesn't exist already
+            if 'premade' not in opt:
+
+                d_data_sub = {geneID:d_data_master[geneID]}
+                d_data_master1 = dict(d_data_master1.items()+d_data_sub.items())
+
+                d_order_probs = get_order_prob(d_data_sub,size,reps)
+                d_order_probs_master = dict(d_order_probs_master.items()+d_order_probs.items())
+
+            if geneID in d_order_probs:
+
+                out1,out2,d_taugene,d_pergene,d_phgene,d_nagene = gsp_get_stat_probs(d_order_probs[geneID],new_header,triples,dref,size)
+
+                out_line = [geneID,waveform]+out1+s_stats+out2
+                out_line = [str(l) for l in out_line]
+                out_lines.append(out_line)
+
+                done.append(geneID)
+
+                d_tau = dict(d_tau.items()+{geneID:d_taugene}.items())
+                d_ph = dict(d_ph.items()+{geneID:d_phgene}.items())
+
         
         if len(remaining)>0:
             fn_remaining = fn_out.replace('.txt','_remaining_list.txt')
@@ -272,15 +226,6 @@ def read_in_EMdata(fn):
     return WT
 
 
-def farctanh(x):
-    if x>0.99:
-        return np.arctanh(0.99)
-    elif x<-0.99:
-        return np.arctanh(-0.99)
-    else:
-        return np.arctanh(x)
-    
-
 def get_SD_distr(dseries,reps,size):
     data = np.zeros(size)
     for j in xrange(size):
@@ -291,53 +236,6 @@ def get_SD_distr(dseries,reps,size):
         SD = np.std(ser)
         data[j] = SD
     return data
-
-    
-    
-
-    
-
-
-
-def rename(x):
-    return x
-def open_pickle_append3(fn):
-    d = {}
-    objs =[]
-    f = open(fn,'rb')
-    while 1:
-        try:
-            objs.append(pickle.load(f))
-        except EOFError:
-            break
-    f.close()
-    d1 = {}
-    d2 = {}
-    d3 = {}
-    for aa in objs:
-        new = rename(aa[0].keys()[0])
-        d1[new]=aa[0][aa[0].keys()[0]]
-        d2[new]=aa[1][aa[1].keys()[0]]
-        d3[new]=aa[2][aa[2].keys()[0]]
-    return d1,d2,d3
-
-def open_pickle_append2(fn):
-    d = {}
-    objs =[]
-    f = open(fn,'rb')
-    while 1:
-        try:
-            objs.append(pickle.load(f))
-        except EOFError:
-            break
-    f.close()
-    d1 = {}
-    d2 = {}
-    for aa in objs:
-        new = rename(aa[0].keys()[0])
-        d1[new]=aa[0][aa[0].keys()[0]]
-        d2[new]=aa[1][aa[1].keys()[0]]
-    return [d1,d2]
 
 
 def append_out(fn_out,line):
@@ -386,7 +284,6 @@ def dict_data(data):
     for dat in data:
         d_series[dat[0]] = dat
     return d_series
-
 
 
 def IQR_FC(series):
@@ -502,17 +399,7 @@ def get_data(header,data):
     return d_data,seen
 
 
-def get_series_data(data,id_list):
-    d_data = {}
-    for dat in data:
-        name = dat[0]
-        if name in id_list:
-            series = [float(da) for da in dat[1:]]
-            d_data[name] = [np.mean(series),np.std(series),len(series)]
-    return d_data
-
-
-def get_series_data2(d_data_master,id_list):
+def get_series_data(d_data_master,id_list):
     d_data = {}
     for key in d_data_master:
         if key in id_list:
@@ -617,16 +504,6 @@ def dict_order_probs(ms,sds,ns,size=1000000):
         else:
             d[r] += 1./size
     return d
-
-def periodic(x):
-    x = float(x)
-    while x>12:
-        x=x-24.
-    while x<=-12:
-        x= x+24.
-    return x
-
-
 
 
 def __create_parser__():

@@ -16,7 +16,6 @@ import scipy.special as special
 import scipy.linalg as linalg
 import numpy as np
 
-import numpy as np
 #cimport numpy as np
 #from scipy.stats import kendalltau as kt
 from scipy.stats import circmean as sscircmean
@@ -388,8 +387,8 @@ def kt(x, y, initial_lexsort=True):
 
     # what follows reproduces the ending of Gary Strangman's original
     # stats.kendalltau() in SciPy
-    #svar = (4.0 * n + 10.0) / (9.0 * n * (n - 1))
-    #z = tau / np.sqrt(svar)
-    #prob = special.erfc(np.abs(z) / 1.4142136)
+    svar = (4.0 * n + 10.0) / (9.0 * n * (n - 1))
+    z = tau / np.sqrt(svar)
+    prob = special.erfc(np.abs(z) / 1.4142136)
 
-    return tau, 1
+    return tau, prob
