@@ -42,13 +42,13 @@ If you run the above command as is will produce files with a '_1' appended, as t
 
 ##Version information:
 
-Python 2.7.11 (default, Dec  5 2015, 14:44:47)
-[GCC 4.2.1 Compatible Apple LLVM 7.0.0 (clang-700.1.76)] on darwin
+* Python 2.7.11 (default, Dec  5 2015, 14:44:47)
+* [GCC 4.2.1 Compatible Apple LLVM 7.0.0 (clang-700.1.76)] on darwin
 
-cython.__version__ 0.24
-scipy.__version__ 0.15.1
-numpy.__version__ 1.11.0
-
+* cython.__version__ 0.24
+* scipy.__version__ 0.15.1
+* numpy.__version__ 1.11.0
+* statsmodels.__version__ 0.6.1
 
 ## License:
 This code is released with the MIT License. See the License.txt file for more information.
