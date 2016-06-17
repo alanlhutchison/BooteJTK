@@ -75,16 +75,10 @@ def main(args):
     ### Name vars file based on pkl out file
     fn_out_pkl_vars = fn_out_pkl.replace('.pkl','_vars.pkl') 
 
-    EM = False
     assert fn.split('/')[-1]!='DEFAULT' or fn_out_pkl.split('/')[-1]!='DEFAULT'   
 
-
-    if fn.split('/')[-1][:2]=='EM':
-        EM = True
-        new_header = [0,4,8,12,16,20]
-        d_data_master = read_in_EMdata(fn)
     ### If we already have the PKL file, we just need a place to put the header information
-    elif fn.split('/')[-1]=='DEFAULT' and fn_out_pkl.split('/')[-1]!='DEFAULT':
+    if fn.split('/')[-1]=='DEFAULT' and fn_out_pkl.split('/')[-1]!='DEFAULT':
         d_series = dict(zip([key for key in d_data_master.keys()],[[]*len(d_data_master)]))
         fn_out= fn_out_pkl.replace('.pkl','_{0}-bootejtk.txt'.format(int(size)))
         new_header = [0,4,8,12,16,20,0,4,8,12,16,20] if fn_out_pkl[:-4]=='2.pkl' else [0,4,8,12,16,20]
@@ -94,7 +88,7 @@ def main(args):
         d_series = dict_data(data)
         d_data_master,new_header = get_data(header,data)
 
-
+    #print len(d_data_master)
     new_header = list(new_header)*reps
     
     if 'premade' not in opt:
@@ -131,7 +125,7 @@ def main(args):
     
     d_data_master1 = {}
     d_order_probs_master = {}
-    
+    d_boots_master = {}
     print 'Pickled Orders'
     waveform = 'cosine'
     Ps = []
@@ -153,7 +147,7 @@ def main(args):
         ### If we have an ID list, we only want to deal with data from it.
         if geneID in id_list:
             
-            if fn=='DEFAULT' or EM==True:
+            if fn=='DEFAULT':
                 mmax,mmin,MAX_AMP = np.nan,np.nan,np.nan
                 sIQR_FC = np.nan
                 smean = np.nan
@@ -174,14 +168,13 @@ def main(args):
 
                 d_data_sub = {geneID:d_data_master[geneID]}
                 d_data_master1 = dict(d_data_master1.items()+d_data_sub.items())
-
-                d_order_probs = get_order_prob(d_data_sub,size,reps)
+                #print geneID,d_data_master[geneID]
+                d_order_probs,d_boots = get_order_prob(d_data_sub,size,reps)
                 d_order_probs_master = dict(d_order_probs_master.items()+d_order_probs.items())
-
+                d_boots_master = dict(d_boots_master.items()+d_boots.items())
             if geneID in d_order_probs:
 
                 out1,out2,d_taugene,d_pergene,d_phgene,d_nagene = gsp_get_stat_probs(d_order_probs[geneID],new_header,triples,dref,size)
-
                 out_line = [geneID,waveform]+out1+s_stats+out2
                 out_line = [str(l) for l in out_line]
                 out_lines.append(out_line)
@@ -198,7 +191,7 @@ def main(args):
                 for r in remaining:
                     g.write(r+'\n')
     pickle.dump([d_tau,d_ph],open(fn_out_pkl_vars,'wb'))                    
-    pickle.dump([d_data_master1,d_order_probs_master],open(fn_out_pkl,'wb'))
+    pickle.dump([d_data_master1,d_order_probs_master,d_boots_master],open(fn_out_pkl,'wb'))
     taus = [[i,float(out[-2])] for i,out in enumerate(out_lines)]
     taus = sorted(taus,key=lambda x: np.abs(x[1]),reverse=True)
     indexes = np.array([i[0] for i in taus])
@@ -289,13 +282,14 @@ def dict_data(data):
 def IQR_FC(series):
     qlo = __score_at_percentile__(series, 25)
     qhi = __score_at_percentile__(series, 75)
-    if (qlo==np.nan or qhi==np.nan):
+    if (np.isnan(qlo) or np.isnan(qhi)):
         return np.nan
     elif (qhi==0):
         return 0
     elif ( qlo==0):
         return np.nan
     else:
+        #print qhi,qlo
         iqr = qhi/qlo
         return iqr
 
@@ -379,7 +373,7 @@ def get_data(header,data):
         else:
             dref[h].append(i)
     d_data = {}
-    print dref
+    #print dref
     for dat in data:
         name=dat[0]
         series = [float(da) if is_number(da) else np.nan for da in dat[1:]]
@@ -420,6 +414,7 @@ def eBayes(d_data,D_null={}):
     It generates a dictionary with eBayes adjusted variance values.
     Ns have been set to 1 to not complicate downstream analyses.
     """
+    
     def get_d0_s0(d_data,D_null):
         digamma = lambda x: polygamma(0,x)
         trigamma = lambda x: polygamma(1,x)
@@ -450,8 +445,8 @@ def eBayes(d_data,D_null={}):
         z = 2.*np.log(s2)
 
         e = z - digamma(dg2/2) + np.log(dg2/2)
-        emean = np.mean(e)
-        d0 = 2.* solve_trigamma( np.mean( (e-emean)**2 *G/(G-1)-trigamma(dg2/2) )   )
+        emean = np.nanmean(e)
+        d0 = 2.* solve_trigamma( np.nanmean( (e-emean)**2 *G/(G-1)-trigamma(dg2/2) )   )
         s0 = np.sqrt(np.exp(emean + digamma(d0/2)- np.log(d0/2.)))
 
         #print d0,s0
@@ -469,10 +464,11 @@ def eBayes(d_data,D_null={}):
 
 def get_order_prob(d_data,size,reps):
     d_order_prob = {}
+    d_boots = {}
     for key in d_data:
         res = d_data[key]
-        d_order_prob[key]=dict_of_orders(list(res[0])*reps,list(res[1])*reps,list(res[2])*reps,size)
-    return d_order_prob
+        d_order_prob[key],d_boots[key]=dict_of_orders(list(res[0])*reps,list(res[1])*reps,list(res[2])*reps,size)
+    return d_order_prob,d_boots
 
 
 def dict_of_orders(M,SDS,NS,size):
@@ -481,29 +477,33 @@ def dict_of_orders(M,SDS,NS,size):
     for the different orders given the data
     """
     index = range(len(M))
-    dorder = dict_order_probs(M,SDS,NS,size)
+    dorder,ss = dict_order_probs(M,SDS,NS,size)
     d = {}
     for idx in dorder:
         d[idx]=dorder[idx]
     SUM = sum(d.values())
     for key in d:
         d[key]=d[key]/SUM
-    return d
+    return d,ss
 
-def dict_order_probs(ms,sds,ns,size=1000000): 
+def dict_order_probs(ms,sds,ns,size=100): 
     ### RIGHT NOW AFTER EBAYES NS[i] is always 1, however, this division may be unnecessary
     ### AND MAYBE SHOULD BE REMOVED FROM THIS PROCEDURE
-    sds = [sds[i]/np.sqrt(ns[i]) for i in xrange(len(sds))] 
+    sds = [sds[i]/np.sqrt(ns[i]) for i in xrange(len(sds))]
+    sds = [sd if not np.isnan(sd) else 1e-2 for sd in sds]
+    #print ms
+    #print sds
+    #print ns
     cov=np.diag(sds)
     A = mn(ms,cov)
     d = {}
-    for s in A.rvs(size):
+    ss = np.zeros((len(sds),size))
+    for i,s in enumerate(A.rvs(size)):
+        ss[i,:] = s
         r=tuple(map(int,rankdata(s)))
-        if r not in d:
-            d[r] = 1./size
-        else:
-            d[r] += 1./size
-    return d
+        d.setdefault(r,0)
+        d[r] += 1./size
+    return d,ss
 
 
 def __create_parser__():
