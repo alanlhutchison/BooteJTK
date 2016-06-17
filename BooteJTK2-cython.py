@@ -143,7 +143,7 @@ def main(args):
 
     id_list = d_data_master.keys() if id_list==[] else id_list
     out_lines = []
-    for geneID in d_data_master:
+    for geneID in ['Q9JHS4;Q6P8N8;F7BB92']:# d_data_master:
         ### If we have an ID list, we only want to deal with data from it.
         if geneID in id_list:
             
@@ -165,11 +165,17 @@ def main(args):
 
             ### Need to make this file if it doesn't exist already
             if 'premade' not in opt:
-
+                if geneID=='Q9JHS4;Q6P8N8;F7BB92':
+                    print d_data_master[geneID][0]
+                    print d_data_master[geneID][1]
+                    print d_data_master[geneID][2]
                 d_data_sub = {geneID:d_data_master[geneID]}
                 d_data_master1 = dict(d_data_master1.items()+d_data_sub.items())
                 #print geneID,d_data_master[geneID]
+                
                 d_order_probs,d_boots = get_order_prob(d_data_sub,size,reps)
+                if geneID=='Q9JHS4;Q6P8N8;F7BB92':
+                    assert 1==0
                 d_order_probs_master = dict(d_order_probs_master.items()+d_order_probs.items())
                 d_boots_master = dict(d_boots_master.items()+d_boots.items())
             if geneID in d_order_probs:
@@ -477,33 +483,31 @@ def dict_of_orders(M,SDS,NS,size):
     for the different orders given the data
     """
     index = range(len(M))
-    dorder,ss = dict_order_probs(M,SDS,NS,size)
+    dorder,s2 = dict_order_probs(M,SDS,NS,size)
     d = {}
     for idx in dorder:
         d[idx]=dorder[idx]
     SUM = sum(d.values())
     for key in d:
         d[key]=d[key]/SUM
-    return d,ss
+    return d,s2
 
 def dict_order_probs(ms,sds,ns,size=100): 
-    ### RIGHT NOW AFTER EBAYES NS[i] is always 1, however, this division may be unnecessary
-    ### AND MAYBE SHOULD BE REMOVED FROM THIS PROCEDURE
-    sds = [sds[i]/np.sqrt(ns[i]) for i in xrange(len(sds))]
     sds = [sd if not np.isnan(sd) else 1e-2 for sd in sds]
     #print ms
     #print sds
     #print ns
-    cov=np.diag(sds)
-    A = mn(ms,cov)
     d = {}
-    ss = np.zeros((len(sds),size))
-    for i,s in enumerate(A.rvs(size)):
-        ss[i,:] = s
+    #print sds
+    s3 = np.zeros((size,len(sds)))
+    for i in xrange(len(sds)):
+        s3[:,i] = np.random.normal(ms[i],sds[i],size=size)
+    for s in s3:
         r=tuple(map(int,rankdata(s)))
         d.setdefault(r,0)
         d[r] += 1./size
-    return d,ss
+    #print np.std(s3,axis=0)
+    return d,s3
 
 
 def __create_parser__():
