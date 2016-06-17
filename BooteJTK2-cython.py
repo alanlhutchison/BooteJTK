@@ -143,7 +143,7 @@ def main(args):
 
     id_list = d_data_master.keys() if id_list==[] else id_list
     out_lines = []
-    for geneID in ['Q9JHS4;Q6P8N8;F7BB92']:# d_data_master:
+    for geneID in d_data_master:
         ### If we have an ID list, we only want to deal with data from it.
         if geneID in id_list:
             
@@ -165,17 +165,15 @@ def main(args):
 
             ### Need to make this file if it doesn't exist already
             if 'premade' not in opt:
-                if geneID=='Q9JHS4;Q6P8N8;F7BB92':
-                    print d_data_master[geneID][0]
-                    print d_data_master[geneID][1]
-                    print d_data_master[geneID][2]
+                #if geneID=='Q9JHS4;Q6P8N8;F7BB92':
+                #    print d_data_master[geneID][0]
+                #    print d_data_master[geneID][1]
+                #    print d_data_master[geneID][2]
                 d_data_sub = {geneID:d_data_master[geneID]}
                 d_data_master1 = dict(d_data_master1.items()+d_data_sub.items())
                 #print geneID,d_data_master[geneID]
                 
                 d_order_probs,d_boots = get_order_prob(d_data_sub,size,reps)
-                if geneID=='Q9JHS4;Q6P8N8;F7BB92':
-                    assert 1==0
                 d_order_probs_master = dict(d_order_probs_master.items()+d_order_probs.items())
                 d_boots_master = dict(d_boots_master.items()+d_boots.items())
             if geneID in d_order_probs:
