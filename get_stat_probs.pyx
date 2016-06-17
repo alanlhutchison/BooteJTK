@@ -160,7 +160,7 @@ def pick_best_match(res):
         return res[ind]
 
     ### If we've gotten down here everything has failed
-    print 'Ties remain...',res
+    #print 'Ties remain...',res
     return res[np.random.randint(len(res))]
 
 
