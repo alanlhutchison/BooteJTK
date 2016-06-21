@@ -247,9 +247,8 @@ def write_out(fn_out,output):
 
 def is_number(s):
     try:
-        float(s)
-        return True
-    except ValueError:
+        return np.isfinite(float(s))
+    except TypeError and ValueError:
         return False
 
 
@@ -286,7 +285,7 @@ def dict_data(data):
 def IQR_FC(series):
     qlo = __score_at_percentile__(series, 25)
     qhi = __score_at_percentile__(series, 75)
-    if (np.isnan(qlo) or np.isnan(qhi)):
+    if not is_number(qlo) or not is_number(qhi):
         return np.nan
     elif (qhi==0):
         return 0
