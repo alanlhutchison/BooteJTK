@@ -490,7 +490,7 @@ def dict_of_orders(M,SDS,NS,size):
     return d,s2
 
 def dict_order_probs(ms,sds,ns,size=100): 
-    sds = [sd if not np.isnan(sd) else 1e-2 for sd in sds]
+    sds = [sd if not np.isfinite(sd) else 1e-2 for sd in sds]
     #print ms
     #print sds
     #print ns

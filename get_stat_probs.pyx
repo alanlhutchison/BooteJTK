@@ -4,13 +4,13 @@ from __future__ import division#, absolute_import# print_function, absolute_impo
 #import math
 from collections import namedtuple
 
-from scipy.lib.six import xrange
+#from scipy.lib.six import xrange
 
 # friedmanchisquare patch uses python sum
 #pysum = sum  # save it before it gets overwritten
 
 # Scipy imports.
-from scipy.lib.six import callable, string_types
+#from scipy.lib.six import callable, string_types
 from numpy import array, asarray, ma, zeros, sum
 import scipy.special as special
 import scipy.linalg as linalg
@@ -176,9 +176,8 @@ def get_waveform_list(periods,phases,widths):
     
     for i,period in enumerate(periods):
         j = 0
-        #print lpha,lwid
-        #print lpha*lwid/2
         pairs = [[0,0]]*int(lpha*lwid/2)
+        #print int(lpha*lwid/2)
         for phase in phases:
             for width in widths:
                 nadir = (phase+width)%period
@@ -188,6 +187,7 @@ def get_waveform_list(periods,phases,widths):
                 #print pair, 'not in', pairs,pair not in pairs
                 if pair not in pairs:
                     #print 'Adding', phase,nadir
+                    #print j
                     pairs[j] = [phase,nadir]
                     triples[int(i*lper+j)] = np.array([period,phase,width])
                     j+=1
