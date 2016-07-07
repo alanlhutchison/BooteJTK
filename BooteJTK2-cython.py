@@ -144,6 +144,7 @@ def main(args):
     id_list = d_data_master.keys() if id_list==[] else id_list
     out_lines = []
     for geneID in d_data_master:
+
         ### If we have an ID list, we only want to deal with data from it.
         if geneID in id_list:
             
@@ -490,7 +491,7 @@ def dict_of_orders(M,SDS,NS,size):
     return d,s2
 
 def dict_order_probs(ms,sds,ns,size=100): 
-    sds = [sd if not np.isfinite(sd) else 1e-2 for sd in sds]
+    sds = [sd if is_number(sd) else np.nanmean(sds) for sd in sds]
     #print ms
     #print sds
     #print ns
