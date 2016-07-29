@@ -13,7 +13,9 @@ This script bootstraps time series and provides phase and tau distributions from
 Please use ./BooteJTK -h to see the help screen for further instructions on running this script.
 
 """
-VERSION="0.1"
+VERSION="1.0"
+binpath=os.path.join(os.path.dirname(sys.argv[0]),'bin/')
+sys.path.insert(1,binpath)
 
 #import cmath
 from scipy.stats import circmean as sscircmean
