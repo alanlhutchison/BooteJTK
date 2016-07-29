@@ -1,0 +1,229 @@
+#!/usr/bin/env python
+"""
+Created on Nov 1, 2015
+@author: Alan L. Hutchison, alanlhutchison@uchicago.edu, Aaron R. Dinner Group, University of Chicago
+
+This script is a bootstrapped expansion of the eJTK method described in
+
+Hutchison AL, Maienschein-Cline M, and Chiang AH et al. Improved statistical methods enable greater sensitivity in rhythm detection for genome-wide data, PLoS Computational Biology 2015 11(3): e 1004094. doi:10.1371/journal.pcbi.1004094
+
+This script bootstraps time series and provides phase and tau distributions from those bootstraps to allow for measurement of the variance on phase and tau estimates.
+
+
+Please use ./BooteJTK -h to see the help screen for further instructions on running this script.
+
+"""
+VERSION="0.1"
+
+#import cmath
+from scipy.stats import circmean as sscircmean
+from scipy.stats import circstd as sscircstd
+#import scipy.stats as ss
+import numpy as np
+#from scipy.stats import kendalltau as kt
+from scipy.stats import multivariate_normal as mn
+from scipy.stats import rankdata
+from scipy.stats import norm
+from scipy.special import polygamma
+
+import pickle
+#from operator import itemgetter
+import sys
+import argparse
+import time
+import os.path
+
+from get_stat_probs import get_stat_probs as gsp_get_stat_probs
+from get_stat_probs import get_waveform_list as gsp_get_waveform_list
+from get_stat_probs import make_references as gsp_make_references
+from get_stat_probs import  kt ### this is kendalltau
+
+
+import BooteJTK
+import CalcP
+
+def main(args):
+
+    fn = args.filename
+    prefix = args.prefix
+    fn_waveform = args.waveform
+    fn_period = args.period
+    fn_phase = args.phase
+    fn_width = args.width
+    fn_out = args.output
+    fn_out_pkl = args.pickle # This is the output file which could be read in early
+    fn_list = args.id_list # This is the the list of ids to go through
+    fn_null_list = args.null_list # These are geneIDs to be used to estimate the SD
+    size = int(args.size)
+    reps = int(args.reps)
+
+    #fn_null = args.null
+    
+    fn_out,fn_out_pkl,header = BooteJTK.main(args)
+
+    #args.output = fn_out.replace('boot','NULL1000-boot')
+    #args.pickle = fn_out_pkl.replace('boot','NULL1000-boot')
+
+    #print args.pickle
+    #print args.output
+    fn_null_out = args.output
+
+    fn_null = fn.replace('.txt','_NULL1000.txt')
+    sims = 1000
+    with open(fn_null,'w') as g:
+        g.write('\t'.join(['#']+header)+'\n')
+        for i in xrange(sims):
+            line = ['wnoise_'+str(i)] + map(str,list(np.random.normal(0,1,len(header))))
+            g.write('\t'.join(line)+'\n')
+            
+    args.filename = fn_null
+    fn_null_out,_,_ = BooteJTK.main(args)
+    args.filename = fn_out
+    args.null = fn_null_out
+    args.fit = ''    
+    CalcP.main(args)
+
+
+def __create_parser__():
+    p = argparse.ArgumentParser(
+        description="Python script for running empirical JTK_CYCLE with asymmetry search as described in Hutchison, Maienschein-Cline, and Chiang et al. Improved statistical methods enable greater sensitivity in rhythm detection for genome-wide data, PLoS Computational Biology 2015 11(3): e1004094. This script was written by Alan L. Hutchison, alanlhutchison@uchicago.edu, Aaron R. Dinner Group, University of Chicago.",
+        epilog="Please contact the correpsonding author if you have any questions.",
+        version=VERSION
+        )
+
+                   
+    #p.add_argument("-t", "--test",
+    #               action='store_true',
+    #               default=False,
+    #               help="run the Python unittest testing suite")
+    p.add_argument("-o", "--output",
+                   dest="output",
+                   action='store',
+                   metavar="filename string",
+                   type=str,
+                   default = "DEFAULT",
+                   help="You want to output something. If you leave this blank, _jtkout.txt will be appended to your filename")
+
+    p.add_argument("-k","--pickle",
+                          dest="pickle",
+                          metavar="filename string",
+                          type=str,
+                          action='store',
+                          default="DEFAULT",
+                          help='Should be a file with phases you wish to search for listed in a single column separated by newlines.\
+                          Provided file is "period_24.txt"')
+
+
+    p.add_argument("-l","--list",
+                          dest="id_list",
+                          metavar="filename string",
+                          type=str,
+                          action='store',
+                          default="DEFAULT",
+                          help='A filename of the ids to be run in this time series. If time is running out on your job, this will be compared to the ids that have already been completed and a file will be created stating what ids remain to be analyzed.')
+
+
+    p.add_argument("-n","--null",
+                          dest="null_list",
+                          metavar="filename string",
+                          type=str,
+                          action='store',
+                          default="DEFAULT",
+                          help='A filename of the ids upon which to calculate the standard deviation. These ids are non-cycling, so the standard deviation can be taken across the entire time series. Using this argument is useless if the bootstraps have already been performed.')
+    
+
+    analysis = p.add_argument_group(title="JTK_CYCLE analysis options")
+
+    analysis.add_argument("-f", "--filename",
+                   dest="filename",
+                   action='store',
+                   metavar="filename string",
+                   type=str,
+                   help='This is the filename of the data series you wish to analyze.\
+                   The data should be tab-spaced. The first row should contain a # sign followed by the time points with either CT or ZT preceding the time point (such as ZT0 or ZT4). Longer or shorter prefixes will not work. The following rows should contain the gene/series ID followed by the values for every time point. Where values are not available NA should be put in it\'s place.')
+
+
+    analysis.add_argument('-x',"--prefix",
+                          dest="prefix",
+                          type=str,
+                          metavar="string",
+                          action='store',
+                          default="",
+                          help="string to be inserted in the output filename for this run")
+
+
+    analysis.add_argument('-r',"--reps",
+                          dest="reps",
+                          type=int,
+                          metavar="int",
+                          action='store',
+                          default=2,
+                          help="# of reps of each time point to bootstrap (1 or 2, generally)")
+
+    analysis.add_argument('-z',"--size",
+                          dest="size",
+                          type=int,
+                          metavar="int",
+                          action='store',
+                          default=50,
+                          help="Number of bootstraps to be performed")
+    
+
+    analysis.add_argument('-w',"--waveform",
+                          dest="waveform",
+                          type=str,
+                          metavar="filename string",
+                          action='store',
+                          default="cosine",
+                          #choices=["waveform_cosine.txt","waveform_rampup.txt","waveform_rampdown.txt","waveform_step.txt","waveform_impulse.txt","waveform_trough.txt"],
+                          help='Should be a file with waveforms  you wish to search for listed in a single column separated by newlines.\
+                          Options include cosine (dflt), trough')
+
+    analysis.add_argument("--width", "-a", "--asymmetry",
+                          dest="width",
+                          type=str,
+                          metavar="filename string",
+                          action='store',
+                          default="widths_02-22.txt",
+                          #choices=["widths_02-22.txt","widths_04-20_by4.txt","widths_04-12-20.txt","widths_08-16.txt","width_12.txt"]
+                          help='Should be a file with asymmetries (widths) you wish to search for listed in a single column separated by newlines.\
+                          Provided files include files like "widths_02-22.txt","widths_04-20_by4.txt","widths_04-12-20.txt","widths_08-16.txt","width_12.txt"\nasymmetries=widths')
+    analysis.add_argument('-s', "-ph", "--phase",
+                          dest="phase",
+                          metavar="filename string",
+                          type=str,
+                          default="phases_00-22_by2.txt",
+                          help='Should be a file with phases you wish to search for listed in a single column separated by newlines.\
+                          Example files include "phases_00-22_by2.txt" or "phases_00-22_by4.txt" or "phases_00-20_by4.txt"')
+
+    analysis.add_argument("-p","--period",
+                          dest="period",
+                          metavar="filename string",
+                          type=str,
+                          action='store',
+                          default="period_24.txt",
+                          help='Should be a file with phases you wish to search for listed in a single column separated by newlines.\
+                          Provided file is "period_24.txt"')
+
+
+    distribution = analysis.add_mutually_exclusive_group(required=False)
+    distribution.add_argument("-e", "--exact",
+                              dest="harding",
+                              action='store_true',
+                              default=False,
+                              help="use Harding's exact null distribution (dflt)")
+    distribution.add_argument("-g", "--gaussian","--normal",
+                              dest="normal",
+                              action='store_true',
+                              default=False,
+                              help="use normal approximation to null distribution")
+    
+    return p
+
+
+
+
+if __name__=="__main__":
+    parser = __create_parser__()
+    args = parser.parse_args()
+    main(args)
