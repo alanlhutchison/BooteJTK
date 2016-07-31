@@ -368,7 +368,7 @@ def generate_mod_series(reference,series):
 ##################################
 
 def get_data(header,data):
-    new_h = [float(h[2:])%24 for h in header]
+    new_h = [float(h[2:])%24 if 'ZT' in h or 'CT' in h else float(h)%24 for h in header]
     print new_h
     length = len(new_h)
     seen = []
