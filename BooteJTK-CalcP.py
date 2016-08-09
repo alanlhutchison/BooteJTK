@@ -14,8 +14,6 @@ Please use ./BooteJTK -h to see the help screen for further instructions on runn
 
 """
 VERSION="1.0"
-binpath=os.path.join(os.path.dirname(sys.argv[0]),'bin/')
-sys.path.insert(1,binpath)
 
 #import cmath
 from scipy.stats import circmean as sscircmean
@@ -35,11 +33,13 @@ import argparse
 import time
 import os.path
 
-from get_stat_probs import get_stat_probs as gsp_get_stat_probs
-from get_stat_probs import get_waveform_list as gsp_get_waveform_list
-from get_stat_probs import make_references as gsp_make_references
-from get_stat_probs import  kt ### this is kendalltau
+#from get_stat_probs import get_stat_probs as gsp_get_stat_probs
+#from get_stat_probs import get_waveform_list as gsp_get_waveform_list
+#from get_stat_probs import make_references as gsp_make_references
+#from get_stat_probs import  kt ### this is kendalltau
 
+binpath=os.path.join(os.path.dirname(sys.argv[0]),'bin/')
+sys.path.insert(1,binpath)
 
 import BooteJTK
 import CalcP
@@ -47,6 +47,10 @@ import CalcP
 def main(args):
 
     fn = args.filename
+    fn_means = args.means
+    fn_sds = args.sds
+    fn_ns = args.ns
+    
     prefix = args.prefix
     fn_waveform = args.waveform
     fn_period = args.period
@@ -142,6 +146,32 @@ def __create_parser__():
                    metavar="filename string",
                    type=str,
                    help='This is the filename of the data series you wish to analyze.\
+                   The data should be tab-spaced. The first row should contain a # sign followed by the time points with either CT or ZT preceding the time point (such as ZT0 or ZT4). Longer or shorter prefixes will not work. The following rows should contain the gene/series ID followed by the values for every time point. Where values are not available NA should be put in it\'s place.')
+    analysis.add_argument("-F", "--means",
+                   dest="filename",
+                   action='store',
+                   metavar="filename string",
+                    default='DEFAULT',                          
+                   type=str,
+                   help='This is the filename of the time point means of the data series you wish to analyze.
+                   The data should be tab-spaced. The first row should contain a # sign followed by the time points with either CT or ZT preceding the time point (such as ZT0 or ZT4). Longer or shorter prefixes will not work. The following rows should contain the gene/series ID followed by the values for every time point. Where values are not available NA should be put in it\'s place.')
+
+    analysis.add_argument("-S", "--sds",
+                   dest="filename",
+                   action='store',
+                   metavar="filename string",
+                    default='DEFAULT',                          
+                   type=str,
+                   help='This is the filename of the time point standard devations of the data series you wish to analyze.                          
+                   The data should be tab-spaced. The first row should contain a # sign followed by the time points with either CT or ZT preceding the time point (such as ZT0 or ZT4). Longer or shorter prefixes will not work. The following rows should contain the gene/series ID followed by the values for every time point. Where values are not available NA should be put in it\'s place.')
+
+    analysis.add_argument("-N", "--ns",
+                   dest="filename",
+                   action='store',
+                   metavar="filename string",
+                    default='DEFAULT',
+                   type=str,
+                   help='This is the filename of the time point replicate numbers of the data series you wish to analyze.                          
                    The data should be tab-spaced. The first row should contain a # sign followed by the time points with either CT or ZT preceding the time point (such as ZT0 or ZT4). Longer or shorter prefixes will not work. The following rows should contain the gene/series ID followed by the values for every time point. Where values are not available NA should be put in it\'s place.')
 
 

@@ -37,11 +37,16 @@ from get_stat_probs import get_stat_probs as gsp_get_stat_probs
 from get_stat_probs import get_waveform_list as gsp_get_waveform_list
 from get_stat_probs import make_references as gsp_make_references
 from get_stat_probs import  kt ### this is kendalltau
+
+
+
 def main(args):
 
-
-
     fn = args.filename
+    fn_means = args.means
+    fn_sds = args.sds
+    fn_ns = args.ns
+    
     prefix = args.prefix
     fn_waveform = args.waveform
     fn_period = args.period
@@ -56,7 +61,6 @@ def main(args):
 
     ### If no list file set id_list to empty
     id_list = read_in_list(fn_list) if fn_list.split('/')[-1]!='DEFAULT' else []
-    #print id_list
     null_list = read_in_list(fn_null_list) if fn_null_list.split('/')[-1]!='DEFAULT' else []
         
     ### If no pkl out file, modify the option variable
@@ -77,18 +81,26 @@ def main(args):
     assert fn.split('/')[-1]!='DEFAULT' or fn_out_pkl.split('/')[-1]!='DEFAULT'   
 
     ### If we already have the PKL file, we just need a place to put the header information
-    if fn.split('/')[-1]=='DEFAULT' and fn_out_pkl.split('/')[-1]!='DEFAULT':
-        d_series = dict(zip([key for key in d_data_master.keys()],[[]*len(d_data_master)]))
-        fn_out= fn_out_pkl.replace('.pkl','_{0}-bootejtk.txt'.format(int(size)))
-        new_header = [0,4,8,12,16,20,0,4,8,12,16,20] if fn_out_pkl[:-4]=='2.pkl' else [0,4,8,12,16,20]
+    #if fn.split('/')[-1]=='DEFAULT' and fn_out_pkl.split('/')[-1]!='DEFAULT':
+    #    d_series = dict(zip([key for key in d_data_master.keys()],[[]*len(d_data_master)]))
+    #    fn_out= fn_out_pkl.replace('.pkl','_{0}-bootejtk.txt'.format(int(size)))
+    #    new_header = [0,4,8,12,16,20,0,4,8,12,16,20] if fn_out_pkl[:-4]=='2.pkl' else [0,4,8,12,16,20]
     ### If we have the initial data we can get it 
-    elif fn.split('/')[-1]!='DEFAULT':
-        header,data = read_in(fn)
-        d_series = dict_data(data)
-        d_data_master,new_header = get_data(header,data)
+    #elif fn.split('/')[-1]!='DEFAULT':
+    ### WE HAVE CHANGED HOW THE DATA GETS PUT IN
 
-    #print len(d_data_master)
-    new_header = list(new_header)*reps
+    """ Read in the data """
+    header,data = read_in(fn)
+    d_series = dict_data(data)
+    if fn_means!='DEFAULT' and fn_sds!='DEFAULT' and fn_ns!='DEFAULT':
+        header,means = read_in(fn_means)
+        header,sds = read_in(fn_sds)
+        header,ns = read_in(fn_ns)
+        d_data_master,new_header = get_data_multi(header,means,sds,ns)
+    else:
+        d_data_master,new_header = get_data2(header,data)
+        
+    #new_header = list(new_header)*reps
     
     if 'premade' not in opt:
         D_null = get_series_data(d_data_master,null_list) if null_list!=[] else {}
@@ -96,6 +108,7 @@ def main(args):
     elif 'premade' in opt:
         d_data_master,d_order_probs = pickle.load(open(fn_out_pkl,'rb'))
 
+        
     def add_on_out(outfile):
         add_on = 1
         while os.path.isfile(outfile):
@@ -108,6 +121,8 @@ def main(args):
             outfile = outfile.replace(origstr,'_{0}'.format(add_on))+end
             add_on = add_on + 1
         return outfile
+
+    
     fn_out = add_on_out(fn_out)
     fn_out_pkl = add_on_out(fn_out_pkl)
     fn_out_pkl_vars = add_on_out(fn_out_pkl_vars)    
@@ -125,20 +140,14 @@ def main(args):
     d_data_master1 = {}
     d_order_probs_master = {}
     d_boots_master = {}
-    print 'Pickled Orders'
-    waveform = 'cosine'
+
     Ps = []
-    print 'Begin eJTK'
 
     d_tau = {}
     d_ph = {}
 
     done = []
     remaining = []
-    """Time Limit for Code to Run (in hours)"""
-    #time_limit = 35
-    #time_limit_sec = float(60*60*time_limit)
-    #time_original = time.time()
 
     id_list = d_data_master.keys() if id_list==[] else id_list
     out_lines = []
@@ -165,19 +174,14 @@ def main(args):
 
             ### Need to make this file if it doesn't exist already
             if 'premade' not in opt:
-                #if geneID=='Q9JHS4;Q6P8N8;F7BB92':
-                #    print d_data_master[geneID][0]
-                #    print d_data_master[geneID][1]
-                #    print d_data_master[geneID][2]
                 d_data_sub = {geneID:d_data_master[geneID]}
                 d_data_master1 = dict(d_data_master1.items()+d_data_sub.items())
-                #print geneID,d_data_master[geneID]
                 
                 d_order_probs,d_boots = get_order_prob(d_data_sub,size,reps)
                 d_order_probs_master = dict(d_order_probs_master.items()+d_order_probs.items())
                 d_boots_master = dict(d_boots_master.items()+d_boots.items())
+                
             if geneID in d_order_probs:
-
                 out1,out2,d_taugene,d_pergene,d_phgene,d_nagene = gsp_get_stat_probs(d_order_probs[geneID],new_header,triples,dref,size)
                 out_line = [geneID,waveform]+out1+s_stats+out2
                 out_line = [str(l) for l in out_line]
@@ -368,8 +372,9 @@ def generate_mod_series(reference,series):
 ##################################
 
 def get_data(header,data):
+    """This function does not use the header information to set the number of replicates """
     new_h = [float(h[2:])%24 if 'ZT' in h or 'CT' in h else float(h)%24 for h in header]
-    print new_h
+    #print new_h
     length = len(new_h)
     seen = []
     dref = {}
@@ -398,6 +403,67 @@ def get_data(header,data):
             d_data[name]=out
     #print d_data.keys()
     return d_data,seen
+
+
+def get_data2(header,data):
+    """ This function uses the header information to set the number of replicates"""
+    new_h = [float(h[2:])%24 if 'ZT' in h or 'CT' in h else float(h)%24 for h in header]
+    length = len(new_h)
+    seen = []
+    dref = {}
+    for i,h in enumerate(new_h):
+        if h not in seen:
+            seen.append(h)
+            dref[h]=[i]
+        else:
+            dref[h].append(i)
+    d_data = {}
+    for dat in data:
+        name=dat[0]
+        series = [float(da) if is_number(da) else np.nan for da in dat[1:]]
+
+        out = [[],[],[]]
+        for i,s in enumerate(new_h):
+            points = [series[idx] for idx in dref[s]]
+            N = len([p for p in points if not np.isnan(p)])
+            m = np.nanmean(points)
+            std = np.nanstd(points)
+            out[0].append(m)
+            out[1].append(std)
+            out[2].append(N)
+            #print name,seen,out
+        d_data[name]=out
+    #print d_data.keys()
+    return d_data,new_h
+
+
+
+def get_data_mulit(header,data,sds,ns):
+    """ This function takes in several pre-eBayes files to create the d_data dictionary"""
+    new_h = [float(h[2:])%24 if 'ZT' in h or 'CT' in h else float(h)%24 for h in header]
+    length = len(new_h)
+    seen = []
+    dref = {}
+    for i,h in enumerate(new_h):
+        if h not in seen:
+            seen.append(h)
+            dref[h]=[i]
+        else:
+            dref[h].append(i)
+    d_data = {}
+    for j,dat in enumerate(data):
+        g_sds = sds[j]
+        g_ns = ns[j]
+        name=dat[0]
+        g_means = [float(da) if is_number(da) else np.nan for da in dat[1:]]
+        g_sds =   [float(da) if is_number(da) else np.nan for da in g_sds[1:]]
+        g_ns =   [float(da) if is_number(da) else np.nan for da in g_ns[1:]]        
+        out = [g_means,g_sds,g_ns]
+        d_data[name]=out
+
+    return d_data,new_h
+
+
 
 
 def get_series_data(d_data_master,id_list):
@@ -470,13 +536,14 @@ def eBayes(d_data,D_null={}):
     return d_data
 
 def get_order_prob(d_data,size,reps):
+    ### WE WANT TO CHANGE HOW REPS GET INCORPORATED...
     d_order_prob = {}
     d_boots = {}
     for key in d_data:
         res = d_data[key]
-        d_order_prob[key],d_boots[key]=dict_of_orders(list(res[0])*reps,list(res[1])*reps,list(res[2])*reps,size)
+        d_order_prob[key],d_boots[key]=dict_of_orders(res[0],res[1],res[2],size)        
+        #d_order_prob[key],d_boots[key]=dict_of_orders(list(res[0])*reps,list(res[1])*reps,list(res[2])*reps,size)
     return d_order_prob,d_boots
-
 
 def dict_of_orders(M,SDS,NS,size):
     """
@@ -493,21 +560,20 @@ def dict_of_orders(M,SDS,NS,size):
         d[key]=d[key]/SUM
     return d,s2
 
-def dict_order_probs(ms,sds,ns,size=100): 
+def dict_order_probs(ms,sds,ns,size=100):
+    """ Check for SD problems """
     sds = [sd if is_number(sd) else np.nanmean(sds) for sd in sds]
-    #print ms
-    #print sds
-    #print ns
     d = {}
-    #print sds
+    """ Create array for bootstraps of time series """
     s3 = np.zeros((size,len(sds)))
+    """ Fill array time point by time point """
     for i in xrange(len(sds)):
         s3[:,i] = np.random.normal(ms[i],sds[i],size=size)
+    """ Turn into ranks for storage """
     for s in s3:
         r=tuple(map(int,rankdata(s)))
         d.setdefault(r,0)
         d[r] += 1./size
-    #print np.std(s3,axis=0)
     return d,s3
 
 
@@ -565,10 +631,39 @@ def __create_parser__():
                    dest="filename",
                    action='store',
                    metavar="filename string",
+                    default='DEFAULT',                          
                    type=str,
                    help='This is the filename of the data series you wish to analyze.\
                    The data should be tab-spaced. The first row should contain a # sign followed by the time points with either CT or ZT preceding the time point (such as ZT0 or ZT4). Longer or shorter prefixes will not work. The following rows should contain the gene/series ID followed by the values for every time point. Where values are not available NA should be put in it\'s place.')
 
+    analysis.add_argument("-F", "--means",
+                   dest="filename",
+                   action='store',
+                   metavar="filename string",
+                    default='DEFAULT',                          
+                   type=str,
+                   help='This is the filename of the time point means of the data series you wish to analyze.
+                   The data should be tab-spaced. The first row should contain a # sign followed by the time points with either CT or ZT preceding the time point (such as ZT0 or ZT4). Longer or shorter prefixes will not work. The following rows should contain the gene/series ID followed by the values for every time point. Where values are not available NA should be put in it\'s place.')
+
+    analysis.add_argument("-S", "--sds",
+                   dest="filename",
+                   action='store',
+                   metavar="filename string",
+                    default='DEFAULT',                          
+                   type=str,
+                   help='This is the filename of the time point standard devations of the data series you wish to analyze.                          
+                   The data should be tab-spaced. The first row should contain a # sign followed by the time points with either CT or ZT preceding the time point (such as ZT0 or ZT4). Longer or shorter prefixes will not work. The following rows should contain the gene/series ID followed by the values for every time point. Where values are not available NA should be put in it\'s place.')
+
+    analysis.add_argument("-N", "--ns",
+                   dest="filename",
+                   action='store',
+                   metavar="filename string",
+                    default='DEFAULT',
+                   type=str,
+                   help='This is the filename of the time point replicate numbers of the data series you wish to analyze.                          
+                   The data should be tab-spaced. The first row should contain a # sign followed by the time points with either CT or ZT preceding the time point (such as ZT0 or ZT4). Longer or shorter prefixes will not work. The following rows should contain the gene/series ID followed by the values for every time point. Where values are not available NA should be put in it\'s place.')
+    
+    
 
     analysis.add_argument('-x',"--prefix",
                           dest="prefix",
