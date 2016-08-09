@@ -93,10 +93,10 @@ def main(args):
     header,data = read_in(fn)
     d_series = dict_data(data)
     if fn_means!='DEFAULT' and fn_sds!='DEFAULT' and fn_ns!='DEFAULT':
-        header,means = read_in(fn_means)
-        header,sds = read_in(fn_sds)
-        header,ns = read_in(fn_ns)
-        d_data_master,new_header = get_data_multi(header,means,sds,ns)
+        header2,means = read_in(fn_means)
+        _,sds = read_in(fn_sds)
+        _,ns = read_in(fn_ns)
+        d_data_master,new_header = get_data_multi(header,header2,means,sds,ns)
     else:
         d_data_master,new_header = get_data2(header,data)
         
@@ -438,26 +438,26 @@ def get_data2(header,data):
 
 
 
-def get_data_mulit(header,data,sds,ns):
+def get_data_multi(header,header2,data,sds,ns):
     """ This function takes in several pre-eBayes files to create the d_data dictionary"""
     new_h = [float(h[2:])%24 if 'ZT' in h or 'CT' in h else float(h)%24 for h in header]
+    h2 = [float(h[2:])%24 if 'ZT' in h or 'CT' in h else float(h)%24 for h in header2]    
     length = len(new_h)
     seen = []
     dref = {}
     for i,h in enumerate(new_h):
-        if h not in seen:
-            seen.append(h)
-            dref[h]=[i]
-        else:
-            dref[h].append(i)
+        seen.append(h2.index(h))
     d_data = {}
     for j,dat in enumerate(data):
         g_sds = sds[j]
         g_ns = ns[j]
         name=dat[0]
         g_means = [float(da) if is_number(da) else np.nan for da in dat[1:]]
+        g_means = [g_means[i] for i in seen]
         g_sds =   [float(da) if is_number(da) else np.nan for da in g_sds[1:]]
-        g_ns =   [float(da) if is_number(da) else np.nan for da in g_ns[1:]]        
+        g_sds = [g_sds[i] for i in seen]
+        g_ns =   [float(da) if is_number(da) else np.nan for da in g_ns[1:]]
+        g_ns = [g_ns[i] for i in seen]
         out = [g_means,g_sds,g_ns]
         d_data[name]=out
 
