@@ -148,30 +148,30 @@ def __create_parser__():
                    help='This is the filename of the data series you wish to analyze.\
                    The data should be tab-spaced. The first row should contain a # sign followed by the time points with either CT or ZT preceding the time point (such as ZT0 or ZT4). Longer or shorter prefixes will not work. The following rows should contain the gene/series ID followed by the values for every time point. Where values are not available NA should be put in it\'s place.')
     analysis.add_argument("-F", "--means",
-                   dest="filename",
+                   dest="means",
                    action='store',
                    metavar="filename string",
                     default='DEFAULT',                          
                    type=str,
-                   help='This is the filename of the time point means of the data series you wish to analyze.
+                   help='This is the filename of the time point means of the data series you wish to analyze.\
                    The data should be tab-spaced. The first row should contain a # sign followed by the time points with either CT or ZT preceding the time point (such as ZT0 or ZT4). Longer or shorter prefixes will not work. The following rows should contain the gene/series ID followed by the values for every time point. Where values are not available NA should be put in it\'s place.')
 
     analysis.add_argument("-S", "--sds",
-                   dest="filename",
+                   dest="sds",
                    action='store',
                    metavar="filename string",
                     default='DEFAULT',                          
                    type=str,
-                   help='This is the filename of the time point standard devations of the data series you wish to analyze.                          
+                   help='This is the filename of the time point standard devations of the data series you wish to analyze.\
                    The data should be tab-spaced. The first row should contain a # sign followed by the time points with either CT or ZT preceding the time point (such as ZT0 or ZT4). Longer or shorter prefixes will not work. The following rows should contain the gene/series ID followed by the values for every time point. Where values are not available NA should be put in it\'s place.')
 
     analysis.add_argument("-N", "--ns",
-                   dest="filename",
+                   dest="ns",
                    action='store',
                    metavar="filename string",
                     default='DEFAULT',
                    type=str,
-                   help='This is the filename of the time point replicate numbers of the data series you wish to analyze.                          
+                   help='This is the filename of the time point replicate numbers of the data series you wish to analyze.                         \
                    The data should be tab-spaced. The first row should contain a # sign followed by the time points with either CT or ZT preceding the time point (such as ZT0 or ZT4). Longer or shorter prefixes will not work. The following rows should contain the gene/series ID followed by the values for every time point. Where values are not available NA should be put in it\'s place.')
 
 

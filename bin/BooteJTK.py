@@ -100,13 +100,13 @@ def main(args):
     else:
         d_data_master,new_header = get_data2(header,data)
         
-    #new_header = list(new_header)*reps
+        #new_header = list(new_header)*reps
     
-    if 'premade' not in opt:
-        D_null = get_series_data(d_data_master,null_list) if null_list!=[] else {}
-        d_data_master = eBayes(d_data_master,D_null)
-    elif 'premade' in opt:
-        d_data_master,d_order_probs = pickle.load(open(fn_out_pkl,'rb'))
+        if 'premade' not in opt:
+            D_null = get_series_data(d_data_master,null_list) if null_list!=[] else {}
+            d_data_master = eBayes(d_data_master,D_null)
+        elif 'premade' in opt:
+            d_data_master,d_order_probs = pickle.load(open(fn_out_pkl,'rb'))
 
         
     def add_on_out(outfile):
@@ -149,13 +149,13 @@ def main(args):
     done = []
     remaining = []
 
-    id_list = d_data_master.keys() if id_list==[] else id_list
+    id_list = d_series.keys() if id_list==[] else id_list
     out_lines = []
     for geneID in d_data_master:
 
         ### If we have an ID list, we only want to deal with data from it.
         if geneID in id_list:
-            
+
             if fn=='DEFAULT':
                 mmax,mmin,MAX_AMP = np.nan,np.nan,np.nan
                 sIQR_FC = np.nan
@@ -200,9 +200,12 @@ def main(args):
                     g.write(r+'\n')
     pickle.dump([d_tau,d_ph],open(fn_out_pkl_vars,'wb'))                    
     pickle.dump([d_data_master1,d_order_probs_master,d_boots_master],open(fn_out_pkl,'wb'))
+    print out_lines
     taus = [[i,float(out[-2])] for i,out in enumerate(out_lines)]
     taus = sorted(taus,key=lambda x: np.abs(x[1]),reverse=True)
+    print taus
     indexes = np.array([i[0] for i in taus])
+    print indexes
     out_lines = np.array(out_lines)[np.array(indexes)]
     g = open(fn_out,'a')
     g.write("ID\tWaveform\tPeriodMean\tPeriodStdDev\tPhaseMean\tPhaseStdDev\tNadirMean\tNadirStdDev\tMean\tStd_Dev\tMax\tMin\tMax_Amp\tFC\tIQR_FC\tNumBoots\tTauMean\tTauStdDev\n")
@@ -637,30 +640,28 @@ def __create_parser__():
                    The data should be tab-spaced. The first row should contain a # sign followed by the time points with either CT or ZT preceding the time point (such as ZT0 or ZT4). Longer or shorter prefixes will not work. The following rows should contain the gene/series ID followed by the values for every time point. Where values are not available NA should be put in it\'s place.')
 
     analysis.add_argument("-F", "--means",
-                   dest="filename",
+                   dest="means",
                    action='store',
                    metavar="filename string",
                     default='DEFAULT',                          
                    type=str,
-                   help='This is the filename of the time point means of the data series you wish to analyze.
-                   The data should be tab-spaced. The first row should contain a # sign followed by the time points with either CT or ZT preceding the time point (such as ZT0 or ZT4). Longer or shorter prefixes will not work. The following rows should contain the gene/series ID followed by the values for every time point. Where values are not available NA should be put in it\'s place.')
+                   help='This is the filename of the time point means of the data series you wish to analyze. The data should be tab-spaced. The first row should contain a # sign followed by the time points with either CT or ZT preceding the time point (such as ZT0 or ZT4). Longer or shorter prefixes will not work. The following rows should contain the gene/series ID followed by the values for every time point. Where values are not available NA should be put in it\'s place.')
 
     analysis.add_argument("-S", "--sds",
-                   dest="filename",
+                   dest="sds",
                    action='store',
                    metavar="filename string",
                     default='DEFAULT',                          
                    type=str,
-                   help='This is the filename of the time point standard devations of the data series you wish to analyze.                          
-                   The data should be tab-spaced. The first row should contain a # sign followed by the time points with either CT or ZT preceding the time point (such as ZT0 or ZT4). Longer or shorter prefixes will not work. The following rows should contain the gene/series ID followed by the values for every time point. Where values are not available NA should be put in it\'s place.')
+                   help='This is the filename of the time point standard devations of the data series you wish to analyze. The data should be tab-spaced. The first row should contain a # sign followed by the time points with either CT or ZT preceding the time point (such as ZT0 or ZT4). Longer or shorter prefixes will not work. The following rows should contain the gene/series ID followed by the values for every time point. Where values are not available NA should be put in it\'s place.')
 
     analysis.add_argument("-N", "--ns",
-                   dest="filename",
+                   dest="ns",
                    action='store',
                    metavar="filename string",
                     default='DEFAULT',
                    type=str,
-                   help='This is the filename of the time point replicate numbers of the data series you wish to analyze.                          
+                   help='This is the filename of the time point replicate numbers of the data series you wish to analyze. \
                    The data should be tab-spaced. The first row should contain a # sign followed by the time points with either CT or ZT preceding the time point (such as ZT0 or ZT4). Longer or shorter prefixes will not work. The following rows should contain the gene/series ID followed by the values for every time point. Where values are not available NA should be put in it\'s place.')
     
     
