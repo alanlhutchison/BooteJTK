@@ -33,6 +33,7 @@ import argparse
 import time
 import os.path
 
+import subprocess
 #from get_stat_probs import get_stat_probs as gsp_get_stat_probs
 #from get_stat_probs import get_waveform_list as gsp_get_waveform_list
 #from get_stat_probs import make_references as gsp_make_references
@@ -47,9 +48,11 @@ import CalcP
 def main(args):
 
     fn = args.filename
-    fn_means = args.means
-    fn_sds = args.sds
-    fn_ns = args.ns
+
+    ### INTEGRATING THIS INTO THE R CODE
+    #fn_means = args.means
+    #fn_sds = args.sds
+    #fn_ns = args.ns
     
     prefix = args.prefix
     fn_waveform = args.waveform
@@ -64,6 +67,20 @@ def main(args):
     reps = int(args.reps)
 
     #fn_null = args.null
+
+    """Rscript command for Limma"""
+    command = 'Rscript'
+    path2script = binpath+'Limma_script.R'
+    pref=fn.replace('.txt','')
+    period='24'
+    arguments = [fn, pref, period]
+    cmd = [command, path2script] + arguments
+    subprocess.call(cmd)    
+
+
+    args.means = fn.replace('.txt','_Means_postLimma.txt')
+    args.sds = fn.replace('.txt','_Sds_postLimma.txt')
+    args.ns = fn.replace('.txt','_Ns_postLimma.txt')
     
     fn_out,fn_out_pkl,header = BooteJTK.main(args)
 
@@ -75,6 +92,8 @@ def main(args):
     fn_null_out = args.output
 
     fn_null = fn.replace('.txt','_NULL1000.txt')
+
+    
     sims = 1000
     with open(fn_null,'w') as g:
         g.write('\t'.join(['#']+header)+'\n')
@@ -83,6 +102,20 @@ def main(args):
             g.write('\t'.join(line)+'\n')
             
     args.filename = fn_null
+    
+    """Rscript command for Limma"""
+    command = 'Rscript'
+    path2script = binpath+'Limma_script.R'
+    pref=fn_null.replace('.txt','')
+    period='24'
+    arguments = [fn_null, pref, period]
+    cmd = [command, path2script] + arguments
+    subprocess.call(cmd)    
+    
+    args.means = fn_null.replace('.txt','_Means_postLimma.txt')
+    args.sds = fn_null.replace('.txt','_Sds_postLimma.txt')
+    args.ns = fn_null.replace('.txt','_Ns_postLimma.txt')
+    
     fn_null_out,_,_ = BooteJTK.main(args)
     args.filename = fn_out
     args.null = fn_null_out

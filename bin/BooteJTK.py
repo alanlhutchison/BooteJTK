@@ -200,12 +200,12 @@ def main(args):
                     g.write(r+'\n')
     pickle.dump([d_tau,d_ph],open(fn_out_pkl_vars,'wb'))                    
     pickle.dump([d_data_master1,d_order_probs_master,d_boots_master],open(fn_out_pkl,'wb'))
-    print out_lines
+    #print out_lines
     taus = [[i,float(out[-2])] for i,out in enumerate(out_lines)]
     taus = sorted(taus,key=lambda x: np.abs(x[1]),reverse=True)
-    print taus
+    #print taus
     indexes = np.array([i[0] for i in taus])
-    print indexes
+    #print indexes
     out_lines = np.array(out_lines)[np.array(indexes)]
     g = open(fn_out,'a')
     g.write("ID\tWaveform\tPeriodMean\tPeriodStdDev\tPhaseMean\tPhaseStdDev\tNadirMean\tNadirStdDev\tMean\tStd_Dev\tMax\tMin\tMax_Amp\tFC\tIQR_FC\tNumBoots\tTauMean\tTauStdDev\n")
