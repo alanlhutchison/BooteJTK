@@ -2,7 +2,7 @@
 
 list.of.packages <- c("limma", "reshape","reshape2")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
-if(length(new.packages)>0) install.packages(new.packages)
+if(length(new.packages)>0) install.packages(new.packages,repos='http://cran.us.r-project.org')
 
 # library("optparse")
 # option_list = list(
