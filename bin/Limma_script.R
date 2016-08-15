@@ -1,8 +1,14 @@
 #!/usr/bin/env Rscript
 
-list.of.packages <- c("limma", "reshape","reshape2")
-new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
-if(length(new.packages)>0) install.packages(new.packages,repos='http://cran.us.r-project.org')
+source("https://bioconductor.org/biocLite.R")
+list.of.packages.bioc <- c("limma")
+new.packages.bioc <- list.of.packages.bioc[!(list.of.packages.bioc %in% installed.packages()[,"Package"])]
+if(length(new.packages.bioc)>0) biocLite(new.packages.reg,ask=FALSE)
+
+list.of.packages.reg <- c("reshape","reshape2",'pacman')
+new.packages.reg <- list.of.packages.reg[!(list.of.packages.reg %in% installed.packages()[,"Package"])]
+if(length(new.packages.reg)>0) install.packages(new.packages.reg,repos='http://cran.us.r-project.org')
+
 
 # library("optparse")
 # option_list = list(
