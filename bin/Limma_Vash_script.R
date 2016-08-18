@@ -1,41 +1,28 @@
 #!/usr/bin/env Rscript
 
-# library("optparse")
-# option_list = list(
-#   make_option(c("-f", "--file"), type="character", default=NULL, 
-#               help="dataset file name", metavar="character"),
-#   make_option(c("-o", "--out"), type="character", default="out.txt", 
-#               help="output file name [default= %default]", metavar="character")
-#   make_option(c("-p", "--period"), type="integer", default=24,
-#               help="period length [default= %default]", metavar="integer")
-# ); 
-# 
-# opt_parser = OptionParser(option_list=option_list);
-# opt = parse_args(opt_parser);
-# 
-# if (is.null(opt$file)){
-#   print_help(opt_parser)
-#   stop("At least one argument must be supplied (input file).n", call.=FALSE)
-# }
-# df = read.table(opt$file, header=TRUE)
-# prefix = opt$out
-# period = opt$period
+
 source("https://bioconductor.org/biocLite.R")
 list.of.packages.bioc <- c("limma")
 new.packages.bioc <- list.of.packages.bioc[!(list.of.packages.bioc %in% installed.packages()[,"Package"])]
 if(length(new.packages.bioc)>0) biocLite(new.packages.bioc,ask=FALSE)
 
 
-list.of.packages.reg <- c("reshape","reshape2","devtools")
+list.of.packages.reg <- c("reshape","reshape2","devtools",'qvalue')
 new.packages.reg <- list.of.packages.reg[!(list.of.packages.reg %in% installed.packages()[,"Package"])]
 if(length(new.packages.reg)>0) install.packages(new.packages.reg,repos='http://cran.us.r-project.org')
-library('devtools')
-install_github("mengyin/vashr",build_vignettes=TRUE)
-
 
 library('limma')
 library('reshape2')
 library('reshape')
+library('qvalue')
+library('devtools')
+
+install_github("stephens999/ashr")
+library('ashr')
+
+install_github("mengyin/vashr",build_vignettes=TRUE)
+library('vashr')
+
 
 args = commandArgs(trailingOnly=TRUE)
 
@@ -112,7 +99,7 @@ series.fit = limma::lmFit(series.new)
 series.ebayes = eBayes(series.fit,robust = TRUE,trend = TRUE)
 
 
-library(vashr)
+
 sehat <- series.ebayes$stdev.unscaled*series.ebayes$sigma
 fit.vash <- vash(sehat=sehat, df=series.ebayes$df.residual[1])
 
