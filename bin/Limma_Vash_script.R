@@ -24,6 +24,10 @@ install_github("mengyin/vashr",build_vignettes=TRUE)
 library('vashr')
 
 
+
+
+
+
 args = commandArgs(trailingOnly=TRUE)
 
 fn = args[1]
@@ -36,10 +40,10 @@ period = as.numeric(args[3])
 # print(class(pre))
 # print(period)
 # print(class(period))
-#fn = '../Hughes_by2-1_head.txt'
-#pre = 'prefix'
+fn = '/Users/alanlhutchison/Desktop/real_data_large/Mauvoisin2/Mauvoisin_prot_top10_jtkready.txt'
+pre = 'prefix'
 df = read.csv(fn,header=TRUE,sep='\t')
-#period = 24
+period = 24
 rownames = df[,1]
 
 row.names(df) = rownames
@@ -96,12 +100,27 @@ print(head(series.new))
 print(tail(series.new))
 
 series.fit = limma::lmFit(series.new)
-series.ebayes = eBayes(series.fit,robust = TRUE,trend = TRUE)
+for (name in names(series.fit)){
+  if (sum(is.na(series.fit[[name]]))>0){
+    print(name)
+    series.fit[[name]]<-replace(x<-series.fit[[name]],is.na(x),mean(series.fit[[name]],na.rm=TRUE))
+  }
+  else{
+    series.fit[[name]]<-series.fit[[name]]
+  }
+}
+
+
+#series.ebayes = eBayes(series.fit,robust = TRUE,trend = TRUE)
 
 
 
-sehat <- series.ebayes$stdev.unscaled*series.ebayes$sigma
-fit.vash <- vash(sehat=sehat, df=series.ebayes$df.residual[1])
+sehat <- series.fit$stdev.unscaled*series.fit$sigma
+
+sehat <- replace(x<-sehat,is.na(x),mean(sehat,na.rm=TRUE))
+
+
+fit.vash <- vash(sehat=sehat, df=mean(series.fit$df.residual,na.rm=TRUE))
 
 
 series.act =  series.new
