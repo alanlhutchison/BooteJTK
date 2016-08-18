@@ -284,8 +284,6 @@ def __create_parser__():
 
     analysis.add_argument("-V","--vash",
                           dest="vash",
-                          metavar="filename string",
-                          type=bool,
                           action='store_true',
                           default=False,
                           help='Determine if you would like to use limma or Vash')

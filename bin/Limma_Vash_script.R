@@ -20,6 +20,19 @@
 # df = read.table(opt$file, header=TRUE)
 # prefix = opt$out
 # period = opt$period
+source("https://bioconductor.org/biocLite.R")
+list.of.packages.bioc <- c("limma")
+new.packages.bioc <- list.of.packages.bioc[!(list.of.packages.bioc %in% installed.packages()[,"Package"])]
+if(length(new.packages.bioc)>0) biocLite(new.packages.bioc,ask=FALSE)
+
+
+list.of.packages.reg <- c("reshape","reshape2","devtools")
+new.packages.reg <- list.of.packages.reg[!(list.of.packages.reg %in% installed.packages()[,"Package"])]
+if(length(new.packages.reg)>0) install.packages(new.packages.reg,repos='http://cran.us.r-project.org')
+
+install_github("mengyin/vashr",build_vignettes=TRUE)
+
+
 library('limma')
 library('reshape2')
 library('reshape')
@@ -96,6 +109,7 @@ print(tail(series.new))
 
 series.fit = limma::lmFit(series.new)
 series.ebayes = eBayes(series.fit,robust = TRUE,trend = TRUE)
+
 
 library(vashr)
 sehat <- series.ebayes$stdev.unscaled*series.ebayes$sigma
