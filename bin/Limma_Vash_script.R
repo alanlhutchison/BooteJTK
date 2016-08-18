@@ -17,10 +17,10 @@ library('reshape')
 library('qvalue')
 library('devtools')
 
-install_github("stephens999/ashr")
+install_github("stephens999/ashr",build_vignettes=FALSE)
 library('ashr')
 
-install_github("mengyin/vashr",build_vignettes=TRUE)
+install_github("mengyin/vashr",build_vignettes=FALSE)
 library('vashr')
 
 
@@ -40,10 +40,10 @@ period = as.numeric(args[3])
 # print(class(pre))
 # print(period)
 # print(class(period))
-fn = '/Users/alanlhutchison/Desktop/real_data_large/Mauvoisin2/Mauvoisin_prot_top10_jtkready.txt'
-pre = 'prefix'
+#fn = '/Users/alanlhutchison/Desktop/real_data_large/Mauvoisin2/Mauvoisin_prot_top10_jtkready.txt'
+#pre = 'prefix'
 df = read.csv(fn,header=TRUE,sep='\t')
-period = 24
+#period = 24
 rownames = df[,1]
 
 row.names(df) = rownames
