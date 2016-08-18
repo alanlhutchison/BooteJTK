@@ -67,20 +67,26 @@ def main(args):
     reps = int(args.reps)
 
     #fn_null = args.null
-
     """Rscript command for Limma"""
+    if args.vash=False:
+        path2script = binpath+'Limma_script.R'
+        args.means = fn.replace('.txt','_Means_postLimma.txt')
+        args.sds = fn.replace('.txt','_Sds_postLimma.txt')
+        args.ns = fn.replace('.txt','_Ns_postLimma.txt')
+    else:
+        path2script = binpath+'Limma_Vash_script.R'
+        args.means = fn.replace('.txt','_Means_postVash.txt')
+        args.sds = fn.replace('.txt','_Sds_postVash.txt')
+        args.ns = fn.replace('.txt','_Ns_postVash.txt')
+
     command = 'Rscript'
-    path2script = binpath+'Limma_script.R'
+        
     pref=fn.replace('.txt','')
     period='24'
     arguments = [fn, pref, period]
     cmd = [command, path2script] + arguments
     subprocess.call(cmd)    
-
-
-    args.means = fn.replace('.txt','_Means_postLimma.txt')
-    args.sds = fn.replace('.txt','_Sds_postLimma.txt')
-    args.ns = fn.replace('.txt','_Ns_postLimma.txt')
+        
     
     fn_out,fn_out_pkl,header = BooteJTK.main(args)
 
@@ -92,7 +98,6 @@ def main(args):
     fn_null_out = args.output
 
     fn_null = fn.replace('.txt','_NULL1000.txt')
-
     
     sims = 1000
     with open(fn_null,'w') as g:
@@ -104,17 +109,23 @@ def main(args):
     args.filename = fn_null
     
     """Rscript command for Limma"""
+    if args.vash=False:
+        path2script = binpath+'Limma_script.R'
+        args.means = fn.replace('.txt','_Means_postLimma.txt')
+        args.sds = fn.replace('.txt','_Sds_postLimma.txt')
+        args.ns = fn.replace('.txt','_Ns_postLimma.txt')
+    else:
+        path2script = binpath+'Limma_Vash_script.R'
+        args.means = fn.replace('.txt','_Means_postVash.txt')
+        args.sds = fn.replace('.txt','_Sds_postVash.txt')
+        args.ns = fn.replace('.txt','_Ns_postVash.txt')
+    
     command = 'Rscript'
-    path2script = binpath+'Limma_script.R'
     pref=fn_null.replace('.txt','')
     period='24'
     arguments = [fn_null, pref, period]
     cmd = [command, path2script] + arguments
     subprocess.call(cmd)    
-    
-    args.means = fn_null.replace('.txt','_Means_postLimma.txt')
-    args.sds = fn_null.replace('.txt','_Sds_postLimma.txt')
-    args.ns = fn_null.replace('.txt','_Ns_postLimma.txt')
     
     fn_null_out,_,_ = BooteJTK.main(args)
     args.filename = fn_out
@@ -270,6 +281,16 @@ def __create_parser__():
                           help='Should be a file with phases you wish to search for listed in a single column separated by newlines.\
                           Provided file is "period_24.txt"')
 
+
+    analysis.add_argument("-V","--vash",
+                          dest="vash",
+                          metavar="filename string",
+                          type=bool,
+                          action='store',
+                          default=False,
+                          help='Determine if you would like to use limma or Vash')
+
+    
 
     distribution = analysis.add_mutually_exclusive_group(required=False)
     distribution.add_argument("-e", "--exact",
