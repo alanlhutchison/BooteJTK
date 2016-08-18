@@ -68,7 +68,7 @@ def main(args):
 
     #fn_null = args.null
     """Rscript command for Limma"""
-    if args.vash=False:
+    if args.vash==False:
         path2script = binpath+'Limma_script.R'
         args.means = fn.replace('.txt','_Means_postLimma.txt')
         args.sds = fn.replace('.txt','_Sds_postLimma.txt')
@@ -109,7 +109,7 @@ def main(args):
     args.filename = fn_null
     
     """Rscript command for Limma"""
-    if args.vash=False:
+    if args.vash==False:
         path2script = binpath+'Limma_script.R'
         args.means = fn.replace('.txt','_Means_postLimma.txt')
         args.sds = fn.replace('.txt','_Sds_postLimma.txt')
