@@ -77,14 +77,14 @@ for (x in tx)
 #t1<-round((t1-floor(t1))*10*24+floor(t1))
 #t1 <- t1 %% period
 print(tx)
-colnames(df) <- tx
+colnames(df) <- as.numeric(tx)
 series = df
 print(colnames(series))
 MAX = max(table(as.numeric(colnames(series))%%24))
 print(MAX)
 series.new = NULL
 times = c()
-t2 = unique(tx%%24)
+t2 = unique(as.numeric(tx)%%24)
 t2 = t2[ordered(t2)]
 for (h in t2){
   times = c(times,rep(h,dim(series)[1]))
