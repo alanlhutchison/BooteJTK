@@ -5,7 +5,7 @@ list.of.packages.bioc <- c("limma")
 new.packages.bioc <- list.of.packages.bioc[!(list.of.packages.bioc %in% installed.packages()[,"Package"])]
 if(length(new.packages.bioc)>0) biocLite(new.packages.bioc,ask=FALSE)
 
-list.of.packages.reg <- c("reshape","reshape2",'pacman')
+list.of.packages.reg <- c("reshape","reshape2")
 new.packages.reg <- list.of.packages.reg[!(list.of.packages.reg %in% installed.packages()[,"Package"])]
 if(length(new.packages.reg)>0) install.packages(new.packages.reg,repos='http://cran.us.r-project.org')
 
@@ -54,12 +54,35 @@ rownames = df[,1]
 
 row.names(df) = rownames
 df = df[,-1]
-t1<-(plyr::mapvalues(colnames(df), from=colnames(df), unique(gsub("X", "", colnames(df)))))
-t1<-(plyr::mapvalues(t1, from=t1, unique(gsub("ZT", "", t1))))
-t1<-as.numeric(t1)
-t1<-round((t1-floor(t1))*10*24+floor(t1))
+dfa = read.csv(fn,sep='\t',header=FALSE)
+tx = as.vector(t(dfa[1,-1]))
+tx<-(plyr::mapvalues(tx, from=tx, gsub("X", "", tx)))
+tx<-(plyr::mapvalues(tx, from=tx, gsub("ZT", "", tx)))
+tx<-(plyr::mapvalues(tx, from=tx, gsub("CT", "", tx)))
+seen= c()
+new = c()
+for (x in tx)
+{
+  if (!(x %in% seen)){
+    seen <- append(seen,x)
+    new <- append(new,x)
+  }
+  else if (x %in% seen){
+    y = x
+    while (y %in% tx){
+      y <- as.character(as.numeric(y)+24)
+      while (y %in% new){
+        y <- as.character(as.numeric(y)+24)
+      }
+    }
+    seen<-append(seen,y)
+    new <- append(new,y)
+  }
+}
+#t1<-round((t1-floor(t1))*10*24+floor(t1))
 #t1 <- t1 %% period
-colnames(df) <- t1
+print(tx)
+colnames(df) <- tx
 series = df
 MAX = max(table(as.numeric(colnames(series))%%24))
 print(MAX)
