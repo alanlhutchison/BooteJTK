@@ -84,7 +84,7 @@ MAX = max(table(as.numeric(colnames(series))%%24))
 print(MAX)
 series.new = NULL
 times = c()
-t2 = unique(t1%%24)
+t2 = unique(tx%%24)
 t2 = t2[ordered(t2)]
 for (h in t2){
   times = c(times,rep(h,dim(series)[1]))
