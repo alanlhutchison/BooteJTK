@@ -67,25 +67,49 @@ def main(args):
     reps = int(args.reps)
 
     #fn_null = args.null
-    """Rscript command for Limma"""
-    if args.vash==False:
-        path2script = binpath+'Limma_script.R'
-        args.means = fn.replace('.txt','_Means_postLimma.txt')
-        args.sds = fn.replace('.txt','_Sds_postLimma.txt')
-        args.ns = fn.replace('.txt','_Ns_postLimma.txt')
-    else:
-        path2script = binpath+'Limma_Vash_script.R'
-        args.means = fn.replace('.txt','_Means_postVash.txt')
-        args.sds = fn.replace('.txt','_Sds_postVash.txt')
-        args.ns = fn.replace('.txt','_Ns_postVash.txt')
+    if args.noreps==True:
+        try:
+            df = pd.read_table(fn,index_col='ID')
+        except ValueError:
+            df = pd.read_table(fn,index_col='#')
+        except ValueError:
+            print 'Header needs to begin with "ID" or with "#"'
 
-    command = 'Rscript'
+        j = pd.read_table(args.jtk,index_col='ID')
+        mean = df.loc[j[j.GammaP>0.8].index].std(axis=1).dropna().mean()
         
-    pref=fn.replace('.txt','')
-    period='24'
-    arguments = [fn, pref, period]
-    cmd = [command, path2script] + arguments
-    subprocess.call(cmd)    
+
+        df_sds = pd.DataFrame(np.ones(df.shape)*mean,index=df.index,columns=df.columns)
+        df_ns =  pd.DataFrame(np.ones(df.shape),index=df.index,columns=df.columns)
+        fn_sds = fn.replace('.txt','_Sds_noRepsEst.txt')
+        df_sds.to_csv(fn_sds,na_rep=np.nan,sep='\t'))
+        fn_ns = fn.replace('.txt','_Ns_noRepsEst.txt')
+        df_sds.to_csv(fn_ns,na_rep=np.nan,sep='\t'))
+                      
+        args.means = fn
+        args.sds = fn_sds
+        args.ns = fn_ns
+        
+    else:
+        """Rscript command for Limma"""
+        if args.vash==False:
+            path2script = binpath+'Limma_script.R'
+            args.means = fn.replace('.txt','_Means_postLimma.txt')
+            args.sds = fn.replace('.txt','_Sds_postLimma.txt')
+            args.ns = fn.replace('.txt','_Ns_postLimma.txt')
+        else:
+            path2script = binpath+'Limma_Vash_script.R'
+            args.means = fn.replace('.txt','_Means_postVash.txt')
+            args.sds = fn.replace('.txt','_Sds_postVash.txt')
+            args.ns = fn.replace('.txt','_Ns_postVash.txt')
+
+        command = 'Rscript'
+
+        pref=fn.replace('.txt','')
+        period='24'
+        arguments = [fn, pref, period]
+        cmd = [command, path2script] + arguments
+        subprocess.call(cmd)    
         
     
     fn_out,fn_out_pkl,header = BooteJTK.main(args)
@@ -288,6 +312,21 @@ def __create_parser__():
                           default=False,
                           help='Determine if you would like to use limma or Vash')
 
+    analysis.add_argument("-R","--noreps",
+                          dest="noreps",
+                          action='store_true',
+                          default=False,
+                          help='Determine if your data has no replicates and therefore the standard deviation should be estimated from the arrhythmic time series')
+
+
+    analysis.add_argument("-J","--jtk",
+                          dest="jtk",
+                          metavar="filename string",
+                          type=str,
+                          action='store',
+                          help="The eJTK file to use if you don't have replicates in in your time series. The standard deviation between points will be estimated based on the arrhythmic time series.")
+
+    
     
 
     distribution = analysis.add_mutually_exclusive_group(required=False)

@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 
 
-source("https://bioconductor.org/biocLite.R")
+#source("https://bioconductor.org/biocLite.R")
 list.of.packages.bioc <- c("limma")
 new.packages.bioc <- list.of.packages.bioc[!(list.of.packages.bioc %in% installed.packages()[,"Package"])]
 if(length(new.packages.bioc)>0) biocLite(new.packages.bioc,ask=FALSE)
@@ -17,10 +17,10 @@ library('reshape')
 library('qvalue')
 library('devtools')
 
-install_github("stephens999/ashr",build_vignettes=FALSE)
+#install_github("stephens999/ashr",build_vignettes=FALSE)
 library('ashr')
 
-install_github("mengyin/vashr",build_vignettes=FALSE)
+#install_github("mengyin/vashr",build_vignettes=FALSE)
 library('vashr')
 
 
@@ -91,50 +91,74 @@ for (h in t2){
 }
 for (h in t2){
   ser = series[,as.numeric(colnames(series))%%24==h]
-
-  
+  ser.rownames = row.names(series)
   if (class(ser)=='numeric'){
     for (i in c(1:(MAX-1))){
       ser=cbind(ser,rep(NaN,length(ser)))
+      #print(ser)
+      ser = data.frame(ser)
     }
   }
     else if(dim(ser)[2]!=MAX){
-    for (i in c(1:(MAX-dim(ser)[2]))){
-      ser=cbind(ser,rep(NaN,dim(ser)[1]))   
-
+      for (i in c(1:(MAX-dim(ser)[2]))){
+        ser=cbind(ser,rep(NaN,dim(ser)[1]))   
+      }
+      ser = data.frame(ser)
     }
-  }
+  # else{
+  #     print('Leakage')      
+  #     print('Class of ser')
+  #     print(class(ser))
+  #     print('dim(ser)')
+  #     print(dim(ser))
+  #     print(MAX)
+  # 
+  # }
   if (is.null(series.new)){
     series.new = ser
-    series.new['ID'] = row.names(series.new)
+    series.new['ID'] = ser.rownames
     row.names(series.new) <- NULL
   }else
-  {    
-    ser['ID'] = row.names(ser)    
+  { 
+    ser['ID'] = ser.rownames
     names(ser) <- names(series.new)
     series.new = rbind(series.new,ser)
   }
+  print(dim(series.new))
 }
 rownames = series.new$ID
 series.new = series.new[,-3]
+
+#print(dim(series.new))
+#print(length(times))
 
 #rownames =   rownames(series.new)
 #rownames(series.new) = NULL
 series.new = data.frame(series.new)
 print(head(series.new))
 print(tail(series.new))
-
-series.fit = limma::lmFit(series.new)
+print('Here we are')
+#print(series.new)
+#print(class(series.new))
+#print(dim(series.new))
+#print(dim(as.matrix(series.new,dim(series.new)[1],dim(series.new)[2])))
+series.new = data.matrix(series.new)#,dim(series.new)[1],dim(series.new)[2])
+#print(class(series.new))
+#print(class(series.new[1,1]))
+series.fit = limma::lmFit(series.new,na.rm=TRUE)
+print('Just did the fit')
+#print(series.fit)
 for (name in names(series.fit)){
+  #print(name)
   if (sum(is.na(series.fit[[name]]))>0){
-    print(name)
+    #print(name)
+    #print(series.fit[[name]])
     series.fit[[name]]<-replace(x<-series.fit[[name]],is.na(x),mean(series.fit[[name]],na.rm=TRUE))
   }
   else{
     series.fit[[name]]<-series.fit[[name]]
   }
 }
-
 
 #series.ebayes = eBayes(series.fit,robust = TRUE,trend = TRUE)
 
@@ -147,22 +171,30 @@ sehat <- replace(x<-sehat,is.na(x),mean(sehat,na.rm=TRUE))
 
 fit.vash <- vash(sehat=sehat, df=mean(series.fit$df.residual,na.rm=TRUE))
 
-
+series.new = data.frame(series.new)
 series.act =  series.new
 rownames(series.act) = NULL
-
-
-series.new['Mean'] = apply(series.act,1,mean)
+print('series.act')
+#print(series.act)
+print('mean')
+fmean <- function(x){mean(x,na.rm = TRUE)}
+series.new['Mean'] = apply(series.act,1,fmean)
 #series.new['SD'] = sqrt(series.ebayes$s2.post)
+print('sd')
 series.new['SD'] = fit.vash$sd.post
-
+print('time')
+#print(times)
+#print(length(times))
+#print(dim(series.new))
 series.new['Time'] = times
+#print('id')
 series.new['ID'] = rownames # gsub('at.*','at',rownames)
+#print('n')
 series.new['N'] = apply(series.act,1,length)
 
 
 print('Series.new')
-print(head(series.new))
+#print(series.new)
 # 
 #series.means = series.new[,c('ID','Time','Mean')]
 # means =dcast(series.new,ID ~ Time,value.var='Mean')

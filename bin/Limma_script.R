@@ -38,6 +38,10 @@ args = commandArgs(trailingOnly=TRUE)
 fn = args[1]
 pre = args[2]
 period = as.numeric(args[3])
+
+# fn = '~/Desktop/real_data_large/Hughes3/Hughes48_trimmed.jtkready.txt'
+# pre = 'Hughes48'
+# period = 24
 ## program...
 # print(fn)
 # print(class(fn))
@@ -88,6 +92,7 @@ MAX = max(table(as.numeric(colnames(series))%%24))
 print(MAX)
 series.new = NULL
 times = c()
+
 t2 = unique(as.numeric(tx)%%24)
 t2 = t2[ordered(t2)]
 print(head(series))
@@ -101,12 +106,13 @@ for (h in t2){
   if (class(ser)=='numeric'){
     for (i in c(1:(MAX-1))){
       ser=cbind(ser,rep(NaN,length(ser)))
+      ser=data.frame(ser)
     }
   }
     else if(dim(ser)[2]!=MAX){
     for (i in c(1:(MAX-dim(ser)[2]))){
       ser=cbind(ser,rep(NaN,dim(ser)[1]))   
-
+      ser = data.frame(ser)
     }
   }
   if (is.null(series.new)){
@@ -130,14 +136,16 @@ print(head(series.new))
 print(tail(series.new))
 
 series.fit = limma::lmFit(series.new)
-series.ebayes = eBayes(series.fit,robust = TRUE,trend = TRUE)
+series.ebayes = limma::eBayes(series.fit,robust = TRUE,trend = TRUE)
 
 series.act =  series.new
 rownames(series.act) = NULL
 
 
-series.new['Mean'] = apply(series.act,1,mean)
+fmean <- function(x){mean(x,na.rm = TRUE)}
+series.new['Mean'] = apply(series.act,1,fmean)
 series.new['SD'] = sqrt(series.ebayes$s2.post)
+series.new['SDpre'] = series.ebayes$sigma
 series.new['Time'] = times
 series.new['ID'] = rownames # gsub('at.*','at',rownames)
 series.new['N'] = apply(series.act,1,length)
@@ -155,11 +163,12 @@ print(head(series.new))
 # means = dcast(series.melt,ID ~ Time,value.var = Mean)
 # sds = dcast(series.new,ID ~ Time,value.var = 'SD')
 # ns = dcast(series.new,ID ~ Time,value.var = 'N')
-series.melt = melt(series.new[,c('ID','Time','Mean','SD','N')],id.vars=c('ID','Time'))
+series.melt = melt(series.new[,c('ID','Time','Mean','SD','SDpre','N')],id.vars=c('ID','Time'))
 
 means = dcast(series.melt[series.melt$variable=='Mean',],ID ~ Time ,value.var= 'value')
 sds = dcast(series.melt[series.melt$variable=='SD',],ID ~ Time ,value.var= 'value')
 ns = dcast(series.melt[series.melt$variable=='N',],ID ~ Time ,value.var= 'value')
+sdspre = dcast(series.melt[series.melt$variable=='SDpre',],ID ~ Time ,value.var= 'value')
 
 print('Means')
 print(head(means))
@@ -167,8 +176,11 @@ print(head(means))
 means_out = paste0(pre,'_Means_postLimma.txt')
 sds_out   = paste0(pre,'_Sds_postLimma.txt')
 ns_out    = paste0(pre,'_Ns_postLimma.txt')
+sdspre_out = paste0(pre,'_Sds-pre_postLimma.txt')
+
 
 write.table(means,file=means_out,sep='\t',row.names = FALSE, col.names = TRUE,quote=FALSE)
 write.table(sds,  file=sds_out,sep='\t',  row.names = FALSE, col.names = TRUE,quote=FALSE)
 write.table(ns,   file=ns_out,sep='\t',   row.names = FALSE, col.names = TRUE,quote=FALSE)
+write.table(sdspre,  file=sdspre_out,sep='\t',  row.names = FALSE, col.names = TRUE,quote=FALSE)
 
