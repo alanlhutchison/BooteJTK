@@ -64,9 +64,9 @@ row.names(df) = rownames
 df = df[,-1]
 dfa = read.csv(fn,sep='\t',header=FALSE)
 tx = as.vector(t(dfa[1,-1]))
-tx<-(plyr::mapvalues(tx, from=tx, gsub("X", "", tx)))
-tx<-(plyr::mapvalues(tx, from=tx, gsub("ZT", "", tx)))
-tx<-(plyr::mapvalues(tx, from=tx, gsub("CT", "", tx)))
+tx<-gsub("X","",tx)
+tx<-gsub("ZT","",tx)
+tx<-gsub("CT","",tx)
 seen= c()
 new = c()
 for (x in tx)
@@ -98,7 +98,7 @@ series.new = NULL
 times = c()
 t2 = unique(as.numeric(tx)%%24)
 t2 = sort(t2)
-print(head(series))
+print(series[1:3,1:3])
 rownames.id = rep(row.names(series),length(t2))
 for (h in t2){
   times = c(times,rep(h,dim(series)[1]))
@@ -209,7 +209,7 @@ ns = dcast(series.melt[series.melt$variable=='N',],ID ~ Time ,value.var= 'value'
 sdspre = dcast(series.melt[series.melt$variable=='SDpre',],ID ~ Time ,value.var= 'value')
 
 print('Means')
-print(head(means),2)
+print(means[1:3,1:3])
 
 means_out = paste0(pre,'_Means_postLimma.txt')
 sds_out   = paste0(pre,'_Sds_postLimma.txt')
@@ -221,6 +221,6 @@ write.table(means,file=means_out,sep='\t',row.names = FALSE, col.names = TRUE,qu
 write.table(sds,  file=sds_out,sep='\t',  row.names = FALSE, col.names = TRUE,quote=FALSE)
 write.table(ns,   file=ns_out,sep='\t',   row.names = FALSE, col.names = TRUE,quote=FALSE)
 write.table(sdspre,  file=sdspre_out,sep='\t',  row.names = FALSE, col.names = TRUE,quote=FALSE)
-
+print('Limma_voom_script.R complete')
 
 
