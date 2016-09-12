@@ -39,13 +39,13 @@ fn = args[1]
 pre = args[2]
 period = as.numeric(args[3])
 
-if (length(args)>3){
-  bool.rnaseq = TRUE
-  }
+if (length(args)>3){bool.rnaseq = TRUE}else{bool.rnaseq=FALSE}
 
+print(paste0('bool.rnaseq is ',bool.rnaseq))
 #fn = '~/Desktop/Allada_raw/adjcounts/by2/reps/HC18_FatBody_ZT_ADJcounts_jtkready.txt'
 #pre = 'Allada_HC18_FatBody'
 #period = 24
+#bool.rnaseq = TRUE
 ## program...
 # print(fn)
 # print(class(fn))
@@ -89,66 +89,65 @@ for (x in tx)
 }
 #t1<-round((t1-floor(t1))*10*24+floor(t1))
 #t1 <- t1 %% period
-print(tx)
+#print(tx)
 colnames(df) <- as.numeric(tx)
 series = df
 MAX = max(table(as.numeric(colnames(series))%%24))
-print(MAX)
+#print(MAX)
 series.new = NULL
 times = c()
-
 t2 = unique(as.numeric(tx)%%24)
 t2 = sort(t2)
 print(head(series))
+rownames.id = rep(row.names(series),length(t2))
 for (h in t2){
   times = c(times,rep(h,dim(series)[1]))
 }
 for (h in t2){
+  #print(h)
   if ( is.null(dim(series[,as.numeric(colnames(series))%%24==h])) ){
-    ser.voom = voom(ser)
+    if (bool.rnaseq){ser.voom = voom(ser)} else{ser.voom = vooma(ser)}
     ser.voom$E = series[,as.numeric(colnames(series))%%24==h]
     ser.voom$weights = rep(mean(ser.voom$weights),dim(ser.voom$weights)[1])
- }else{
-  ser = series[,as.numeric(colnames(series))%%24==h]
-  print(head(ser))
-  if (bool.rnaseq){ser.voom = voom(ser)  }else{ser.voom = vooma(ser)}
+    }
+    else{
+      ser = series[,as.numeric(colnames(series))%%24==h]
+      if (bool.rnaseq){ser.voom = voom(ser)} else{ser.voom = vooma(ser)}
   }
+  
   if (class(ser.voom$E)=='numeric'){
     for (i in c(1:(MAX-1))){
       ser.voom$weights = cbind(ser.voom$weights,rep(NaN,length(ser)))
       ser.voom$E = cbind(ser.voom$E,rep(NaN,length(ser)))
-      
-      #ser=cbind(ser,rep(NaN,length(ser)))
-      #ser=data.frame(ser)
     }
   }
-    else if(dim(ser.voom$E)[2]!=MAX){
+  else if(dim(ser.voom$E)[2]!=MAX){
     for (i in c(1:(MAX-dim(ser)[2]))){
       ser.voom$weights = cbind(ser.voom$weights,rep(NaN,dim(ser)[1]))      
-      ser.voom$E = cbind(ser.voom$E,rep(NaN,dim(ser)[1]))      
-      
+      ser.voom$E = cbind(ser.voom$E,rep(NaN,dim(ser)[1])) 
       #ser=cbind(ser,rep(NaN,dim(ser)[1]))   
       #ser = data.frame(ser)
     }
   }
-  print('Check out ser here!')
-  print(head(ser))
+  #print('Check out ser here!')
+  #print(head(ser,2))
   if (is.null(series.new)){
     series.new = ser.voom
     #series.new['ID'] = row.names(series.new)
-    rownames = row.names(series.new$weights)
+    #rownames.id = row.names(ser.voom$E)
     
     #row.names(series.new) <- NULL
   }else
   {    
     #ser['ID'] = row.names(ser)    
-    rownames = c(rownames,row.names(series.new$weights))
+    #print(paste0('We should see this ',h))
+    #print(length(row.names(ser.voom$E)))
+    #rownames.id = c(row.names(ser.voom$E),rownames.id)
     #series.new = rbind(series.new,ser)
     names(ser.voom$weights) <- names(series.new$weights)    
     series.new$weights = rbind(series.new$weights,ser.voom$weights)
     names(ser.voom$E) <- names(series.new$E)    
     series.new$E = rbind(series.new$E,ser.voom$E)
-    
   }
 }
 #rownames = series.new$ID
@@ -186,12 +185,12 @@ series.new['Mean'] = apply(series.act$E,1,fmean)
 series.new['SD'] = sqrt(series.ebayes$s2.post)
 series.new['SDpre'] = series.ebayes$sigma
 series.new['Time'] = times
-series.new['ID'] = rownames # gsub('at.*','at',rownames)
+series.new['ID'] = rownames.id # gsub('at.*','at',rownames)
 series.new['N'] = apply(series.act,1,length)
 
 
-print('Series.new')
-print(head(series.new))
+#print('Series.new')
+#print(head(series.new))
 # 
 #series.means = series.new[,c('ID','Time','Mean')]
 # means =dcast(series.new,ID ~ Time,value.var='Mean')
@@ -210,7 +209,7 @@ ns = dcast(series.melt[series.melt$variable=='N',],ID ~ Time ,value.var= 'value'
 sdspre = dcast(series.melt[series.melt$variable=='SDpre',],ID ~ Time ,value.var= 'value')
 
 print('Means')
-print(head(means))
+print(head(means),2)
 
 means_out = paste0(pre,'_Means_postLimma.txt')
 sds_out   = paste0(pre,'_Sds_postLimma.txt')

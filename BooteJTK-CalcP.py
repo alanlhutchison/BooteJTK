@@ -82,9 +82,9 @@ def main(args):
         df_sds = pd.DataFrame(np.ones(df.shape)*mean,index=df.index,columns=df.columns)
         df_ns =  pd.DataFrame(np.ones(df.shape),index=df.index,columns=df.columns)
         fn_sds = fn.replace('.txt','_Sds_noRepsEst.txt')
-        df_sds.to_csv(fn_sds,na_rep=np.nan,sep='\t'))
+        df_sds.to_csv(fn_sds,na_rep=np.nan,sep='\t')
         fn_ns = fn.replace('.txt','_Ns_noRepsEst.txt')
-        df_sds.to_csv(fn_ns,na_rep=np.nan,sep='\t'))
+        df_sds.to_csv(fn_ns,na_rep=np.nan,sep='\t')
                       
         args.means = fn
         args.sds = fn_sds
@@ -107,7 +107,10 @@ def main(args):
 
         pref=fn.replace('.txt','')
         period='24'
-        arguments = [fn, pref, period]
+        if args.rnaseq:
+            arguments = [fn, pref, period,'rnaseq']
+        else:
+            arguments = [fn, pref, period]            
         cmd = [command, path2script] + arguments
         subprocess.call(cmd)    
         
@@ -312,12 +315,18 @@ def __create_parser__():
                           default=False,
                           help='Determine if you would like to use limma or Vash')
 
-    analysis.add_argument("-R","--noreps",
+    analysis.add_argument("-U","--noreps","--unique",
                           dest="noreps",
                           action='store_true',
                           default=False,
                           help='Determine if your data has no replicates and therefore the standard deviation should be estimated from the arrhythmic time series')
 
+    analysis.add_argument("-R","--rnaseq",
+                          dest="rnaseq",
+                          action='store_true',
+                          default=False,
+                          help='Flag for data that is RNA-Seq and for which voom should be used.')
+    
 
     analysis.add_argument("-J","--jtk",
                           dest="jtk",
