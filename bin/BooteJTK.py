@@ -93,6 +93,7 @@ def main(args):
     header,data = read_in(fn)
     d_series = dict_data(data)
     if fn_means!='DEFAULT' and fn_sds!='DEFAULT' and fn_ns!='DEFAULT':
+        print 'Taking Limma/noreps input'
         header2,means = read_in(fn_means)
         _,sds = read_in(fn_sds)
         _,ns = read_in(fn_ns)
@@ -103,6 +104,7 @@ def main(args):
         #new_header = list(new_header)*reps
     
         if 'premade' not in opt:
+            print 'Running internal eBayes'
             D_null = get_series_data(d_data_master,null_list) if null_list!=[] else {}
             d_data_master = eBayes(d_data_master,D_null)
         elif 'premade' in opt:
