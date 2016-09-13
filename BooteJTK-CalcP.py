@@ -92,6 +92,7 @@ def main(args):
         args.ns = fn_ns
         
     else:
+        print 'Running the Limma commands'
         """Rscript command for Limma"""
         if args.vash==False:
             path2script = binpath+'Limma_voom_script.R'
@@ -120,7 +121,8 @@ def main(args):
                 print "Killed by signal", -ret
             else:
                 print "Command failed with return code", ret
-    
+            exit
+
     fn_out,fn_out_pkl,header = BooteJTK.main(args)
 
     #args.output = fn_out.replace('boot','NULL1000-boot')

@@ -46,7 +46,7 @@ def main(args):
     fn_means = args.means
     fn_sds = args.sds
     fn_ns = args.ns
-    
+
     prefix = args.prefix
     fn_waveform = args.waveform
     fn_period = args.period
@@ -89,6 +89,7 @@ def main(args):
     #elif fn.split('/')[-1]!='DEFAULT':
     ### WE HAVE CHANGED HOW THE DATA GETS PUT IN
 
+    print 'Going to read in data now'
     """ Read in the data """
     header,data = read_in(fn)
     d_series = dict_data(data)
