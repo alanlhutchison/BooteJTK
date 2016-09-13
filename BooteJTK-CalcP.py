@@ -146,14 +146,14 @@ def main(args):
     """Rscript command for Limma"""
     if args.vash==False:
         path2script = binpath+'Limma_voom_script.R'
-        args.means = fn.replace('.txt','_Means_postLimma.txt')
-        args.sds = fn.replace('.txt','_Sds_postLimma.txt')
-        args.ns = fn.replace('.txt','_Ns_postLimma.txt')
+        args.means = fn_null.replace('.txt','_Means_postLimma.txt')
+        args.sds = fn_null.replace('.txt','_Sds_postLimma.txt')
+        args.ns = fn_null.replace('.txt','_Ns_postLimma.txt')
     else:
         path2script = binpath+'Limma_Vash_script.R'
-        args.means = fn.replace('.txt','_Means_postVash.txt')
-        args.sds = fn.replace('.txt','_Sds_postVash.txt')
-        args.ns = fn.replace('.txt','_Ns_postVash.txt')
+        args.means = fn_null.replace('.txt','_Means_postVash.txt')
+        args.sds = fn_null.replace('.txt','_Sds_postVash.txt')
+        args.ns = fn_null.replace('.txt','_Ns_postVash.txt')
     
     command = 'Rscript'
     pref=fn_null.replace('.txt','')
@@ -161,7 +161,7 @@ def main(args):
     arguments = [fn_null, pref, period]
     cmd = [command, path2script] + arguments
     subprocess.call(cmd)    
-    
+    print args
     fn_null_out,_,_ = BooteJTK.main(args)
     args.filename = fn_out
     args.null = fn_null_out
