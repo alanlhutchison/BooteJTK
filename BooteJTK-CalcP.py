@@ -25,7 +25,7 @@ from scipy.stats import multivariate_normal as mn
 from scipy.stats import rankdata
 from scipy.stats import norm
 from scipy.special import polygamma
-
+import pandas as pd
 import pickle
 #from operator import itemgetter
 import sys
