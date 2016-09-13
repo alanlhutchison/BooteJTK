@@ -68,6 +68,8 @@ def main(args):
 
     #fn_null = args.null
     if args.noreps==True:
+        print 'No replicates, skipping Limma procedure'
+        print 'Estimating time point variance from arrhythmic genes'
         try:
             df = pd.read_table(fn,index_col='ID')
         except ValueError:
@@ -77,7 +79,6 @@ def main(args):
 
         j = pd.read_table(args.jtk,index_col='ID')
         mean = df.loc[j[j.GammaP>0.8].index].std(axis=1).dropna().mean()
-        
 
         df_sds = pd.DataFrame(np.ones(df.shape)*mean,index=df.index,columns=df.columns)
         df_ns =  pd.DataFrame(np.ones(df.shape),index=df.index,columns=df.columns)
