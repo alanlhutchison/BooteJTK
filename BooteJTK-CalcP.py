@@ -161,7 +161,7 @@ def main(args):
     arguments = [fn_null, pref, period]
     cmd = [command, path2script] + arguments
     subprocess.call(cmd)    
-    print args
+    #print args
     fn_null_out,_,_ = BooteJTK.main(args)
     args.filename = fn_out
     args.null = fn_null_out
