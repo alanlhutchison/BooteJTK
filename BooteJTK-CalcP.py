@@ -113,7 +113,8 @@ def main(args):
         else:
             arguments = [fn, pref, period]            
         cmd = [command, path2script] + arguments
-        subprocess.call(cmd)    
+        ret = subprocess.call(cmd)
+        print 'Subprocess call is ', ret
         
     
     fn_out,fn_out_pkl,header = BooteJTK.main(args)
