@@ -114,8 +114,12 @@ def main(args):
             arguments = [fn, pref, period]            
         cmd = [command, path2script] + arguments
         ret = subprocess.call(cmd)
-        print 'Subprocess call is ', ret
-        
+        #print 'Subprocess call is ', ret
+        if ret != 0:
+            if ret < 0:
+                print "Killed by signal", -ret
+            else:
+                print "Command failed with return code", ret
     
     fn_out,fn_out_pkl,header = BooteJTK.main(args)
 
