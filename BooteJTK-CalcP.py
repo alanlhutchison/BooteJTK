@@ -91,7 +91,7 @@ def main(args):
         args.sds = fn_sds
         args.ns = fn_ns
         
-    else:
+    elif args.limma==True:
         print 'Running the Limma commands'
         """Rscript command for Limma"""
         if args.vash==False:
@@ -100,7 +100,7 @@ def main(args):
             args.sds = fn.replace('.txt','_Sds_postLimma.txt')
             args.ns = fn.replace('.txt','_Ns_postLimma.txt')
         else:
-            path2script = binpath+'Limma_Vash_script.R'
+            path2script = binpath+'Limma_voom_vash_script.R'
             args.means = fn.replace('.txt','_Means_postVash.txt')
             args.sds = fn.replace('.txt','_Sds_postVash.txt')
             args.ns = fn.replace('.txt','_Ns_postVash.txt')
@@ -121,8 +121,9 @@ def main(args):
                 print "Killed by signal", -ret
             else:
                 print "Command failed with return code", ret
-            exit
-
+            assert False
+    else:
+        pass
     fn_out,fn_out_pkl,header = BooteJTK.main(args)
 
     #args.output = fn_out.replace('boot','NULL1000-boot')
@@ -142,26 +143,51 @@ def main(args):
             g.write('\t'.join(line)+'\n')
             
     args.filename = fn_null
-    
-    """Rscript command for Limma"""
-    if args.vash==False:
-        path2script = binpath+'Limma_voom_script.R'
-        args.means = fn_null.replace('.txt','_Means_postLimma.txt')
-        args.sds = fn_null.replace('.txt','_Sds_postLimma.txt')
-        args.ns = fn_null.replace('.txt','_Ns_postLimma.txt')
+    if args.noreps==True:
+        print 'No replicates, skipping Limma procedure'
+        print 'Estimating time point variance from arrhythmic genes'
+        try:
+            df = pd.read_table(fn,index_col='ID')
+        except ValueError:
+            df = pd.read_table(fn,index_col='#')
+        except ValueError:
+            print 'Header needs to begin with "ID" or with "#"'
+
+        j = pd.read_table(args.jtk,index_col='ID')
+        mean = df.loc[j[j.GammaP>0.8].index].std(axis=1).dropna().mean()
+
+        df_sds = pd.DataFrame(np.ones(df.shape)*mean,index=df.index,columns=df.columns)
+        df_ns =  pd.DataFrame(np.ones(df.shape),index=df.index,columns=df.columns)
+        fn_sds = fn.replace('.txt','_Sds_noRepsEst.txt')
+        df_sds.to_csv(fn_sds,na_rep=np.nan,sep='\t')
+        fn_ns = fn.replace('.txt','_Ns_noRepsEst.txt')
+        df_sds.to_csv(fn_ns,na_rep=np.nan,sep='\t')
+                      
+        args.means = fn
+        args.sds = fn_sds
+        args.ns = fn_ns
+    elif args.limma==True:
+        """Rscript command for Limma"""
+        if args.vash==False:
+            path2script = binpath+'Limma_voom_script.R'
+            args.means = fn_null.replace('.txt','_Means_postLimma.txt')
+            args.sds = fn_null.replace('.txt','_Sds_postLimma.txt')
+            args.ns = fn_null.replace('.txt','_Ns_postLimma.txt')
+        else:
+            path2script = binpath+'Limma_voom_vash_script.R'
+            args.means = fn_null.replace('.txt','_Means_postVash.txt')
+            args.sds = fn_null.replace('.txt','_Sds_postVash.txt')
+            args.ns = fn_null.replace('.txt','_Ns_postVash.txt')
+
+        command = 'Rscript'
+        pref=fn_null.replace('.txt','')
+        period='24'
+        arguments = [fn_null, pref, period]
+        cmd = [command, path2script] + arguments
+        subprocess.call(cmd)    
     else:
-        path2script = binpath+'Limma_Vash_script.R'
-        args.means = fn_null.replace('.txt','_Means_postVash.txt')
-        args.sds = fn_null.replace('.txt','_Sds_postVash.txt')
-        args.ns = fn_null.replace('.txt','_Ns_postVash.txt')
+        pass
     
-    command = 'Rscript'
-    pref=fn_null.replace('.txt','')
-    period='24'
-    arguments = [fn_null, pref, period]
-    cmd = [command, path2script] + arguments
-    subprocess.call(cmd)    
-    #print args
     fn_null_out,_,_ = BooteJTK.main(args)
     args.filename = fn_out
     args.null = fn_null_out
@@ -334,6 +360,12 @@ def __create_parser__():
                           action='store_true',
                           default=False,
                           help='Flag for data that is RNA-Seq and for which voom should be used.')
+    
+    analysis.add_argument("-L","--limma",
+                          dest="limma",
+                          action='store_true',
+                          default=False,
+                          help='Flag for using the limma variance shrinkage methods')
     
 
     analysis.add_argument("-J","--jtk",
