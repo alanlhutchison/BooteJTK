@@ -93,7 +93,7 @@ def main(args):
     """ Read in the data """
     header,data = read_in(fn)
     d_series = dict_data(data)
-    if fn_means!='DEFAULT' and fn_sds!='DEFAULT' and fn_ns!='DEFAULT':
+    if fn_means.split('/')[-1]!='DEFAULT' and fn_sds.split('/')[-1]!='DEFAULT' and fn_ns.split('/')[-1]!='DEFAULT':
         print 'Taking Limma/noreps input'
         header2,means = read_in(fn_means)
         _,sds = read_in(fn_sds)
