@@ -52,8 +52,8 @@ period = as.numeric(args[3])
 if (length(args)>3){bool.rnaseq = TRUE}else{bool.rnaseq=FALSE}
 
 print(paste0('bool.rnaseq is ',bool.rnaseq))
-#fn = '~/Desktop/real_data_large/Mauvoisin2/Mauvoisin_prot_jtkready.txt'
-#pre = '~/Desktop/real_data_large/Mauvoisin2/Mauvoisin_prot_jtkready'
+#fn = '~/Desktop/real_data_large/Robles2/Zhang_Liver_Roble-trimmed_GeneID_jtkready.txt'
+#pre = '~/Desktop/real_data_large/Robles2/Zhang_Liver_Roble-trimmed_GeneID_jtkready'
 #period = 24
 #bool.rnaseq = FALSE
 ## program...
@@ -69,6 +69,13 @@ print(paste0('bool.rnaseq is ',bool.rnaseq))
 df = read.csv(fn,header=TRUE,sep='\t')
 #period = 24
 rownames = df[,1]
+
+counter = 1
+while(sum(duplicated(rownames))>0){
+  rownames[duplicated(rownames)] <- paste0(rownames[duplicated(rownames)],'-xxx',as.character(counter))
+  counter = counter + 1
+}
+
 
 row.names(df) = rownames
 df = df[,-1]
@@ -241,6 +248,8 @@ series.new['Mean'] = apply(series.act$E,1,fmean)
 series.new['SD'] = sds.vash$sd.post
 series.new['SDpre'] = sds.pre
 series.new['Time'] = times
+#rownames.id <- as.vector(sapply(rownames.id,function(x) strsplit(x,'-xxx1')[[1]][1]))
+
 series.new['ID'] = rownames.id # gsub('at.*','at',rownames)
 series.new['N'] = apply(series.act,1,length)
 
