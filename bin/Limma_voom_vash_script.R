@@ -52,10 +52,10 @@ period = as.numeric(args[3])
 if (length(args)>3){bool.rnaseq = TRUE}else{bool.rnaseq=FALSE}
 
 print(paste0('bool.rnaseq is ',bool.rnaseq))
-fn = '~/Desktop/real_data_large/Hughes3/Hughes48_trimmed_by2-1.jtkready.txt'
-pre = 'Hughes'
-period = 24
-bool.rnaseq = FALSE
+#fn = '~/Desktop/real_data_large/Mauvoisin2/Mauvoisin_prot_jtkready.txt'
+#pre = '~/Desktop/real_data_large/Mauvoisin2/Mauvoisin_prot_jtkready'
+#period = 24
+#bool.rnaseq = FALSE
 ## program...
 # print(fn)
 # print(class(fn))
@@ -110,22 +110,53 @@ t2 = unique(as.numeric(tx)%%24)
 t2 = sort(t2)
 print(series[1:3,1:3])
 rownames.id = rep(row.names(series),length(t2))
+
+
+f_changeNA <- function(x){
+  sd = median(apply(x,1,function(y) sd(y,na.rm=TRUE)),na.rm=TRUE)
+  m = mean(apply(ser,2,function(x) mean(x,na.rm=TRUE)),na.rm=TRUE)
+  sd.m = sd(apply(ser,2,function(x) mean(x,na.rm=TRUE)),na.rm=TRUE)
+  f_nareplace <- function(z){
+    #f_max = function(x) {return(max(x,1e-4))}
+    if (is.na(mean(z,na.rm=TRUE))){
+      z<-rnorm(length(z),m,sd.m)
+    }
+    else if (sum(is.na(z))>0){
+      z[is.na(z)]<-rnorm(sum(is.na(z)),mean(z,na.rm=T),sd)
+    }
+    return(z)
+  }
+  xx <- apply(x,1,f_nareplace)              
+  return(t(xx))}
+
+
 for (h in t2){
   times = c(times,rep(h,dim(series)[1]))
 }
+
+ser.voom = NULL
 for (h in t2){
   #print(h)
   if ( is.null(dim(series[,as.numeric(colnames(series))%%24==h])) ){
-    if (bool.rnaseq){ser.voom = voom(ser)} else{ser.voom = vooma(ser)}
+    
+    #if (bool.rnaseq){ser.voom = voom(ser)} else{ser.voom = vooma(ser)}
     ser.voom$E = series[,as.numeric(colnames(series))%%24==h]
-    ser.voom$weights = rep(mean(ser.voom$weights),dim(ser.voom$weights)[1])
+    ser.voom$weights = rep(NaN,dim(series)[1])
+    #mean(ser.voom$weights),dim(ser.voom$weights)[1])
     }
     else{
       ser = series[,as.numeric(colnames(series))%%24==h]
-      if (bool.rnaseq){ser.voom = voom(ser)} else{ser.voom = vooma(ser)}
+      
+      ser = f_changeNA(ser)
+      
+      if (bool.rnaseq){
+        ser.voom = voom(ser)      
+      } else{
+        ser.voom = vooma(ser)        
+        }
+      
   }
-  
-  if (class(ser.voom$E)=='numeric'){
+  if (is.numeric(ser.voom$E)){
     for (i in c(1:(MAX-1))){
       ser.voom$weights = cbind(ser.voom$weights,rep(NaN,length(ser)))
       ser.voom$E = cbind(ser.voom$E,rep(NaN,length(ser)))
@@ -239,16 +270,16 @@ sdspre = dcast(series.melt[series.melt$variable=='SDpre',],ID ~ Time ,value.var=
 print('Means')
 print(means[1:3,1:3])
   
-means_out = paste0(pre,'_Means_postLimma.txt')
-sds_out   = paste0(pre,'_Sds_postLimma.txt')
-ns_out    = paste0(pre,'_Ns_postLimma.txt')
-sdspre_out = paste0(pre,'_Sds-pre_postLimma.txt')
+means_out = paste0(pre,'_Means_postVash.txt')
+sds_out   = paste0(pre,'_Sds_postVash.txt')
+ns_out    = paste0(pre,'_Ns_postVash.txt')
+sdspre_out = paste0(pre,'_Sds-pre_postVash.txt')
 
 
 write.table(means,file=means_out,sep='\t',row.names = FALSE, col.names = TRUE,quote=FALSE)
 write.table(sds,  file=sds_out,sep='\t',  row.names = FALSE, col.names = TRUE,quote=FALSE)
 write.table(ns,   file=ns_out,sep='\t',   row.names = FALSE, col.names = TRUE,quote=FALSE)
 write.table(sdspre,  file=sdspre_out,sep='\t',  row.names = FALSE, col.names = TRUE,quote=FALSE)
-print('Limma_voom_script.R complete')
+print('Limma_voom_vash_script.R complete')
 
 
