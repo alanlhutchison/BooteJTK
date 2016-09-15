@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python
 """
 Created on Nov 1, 2015
@@ -68,6 +69,7 @@ def main(args):
 
     #fn_null = args.null
     if args.noreps==True:
+        args.prefix = 'NoRepSD_'+args.prefix
         print 'No replicates, skipping Limma procedure'
         print 'Estimating time point variance from arrhythmic genes'
         try:
@@ -92,14 +94,18 @@ def main(args):
         args.ns = fn_ns
         
     elif args.limma==True:
-        print 'Running the Limma commands'
+
         """Rscript command for Limma"""
         if args.vash==False:
+            print 'Running the Limma commands'
+            args.prefix = 'Limma_'+args.prefix
             path2script = binpath+'Limma_voom_script.R'
             args.means = fn.replace('.txt','_Means_postLimma.txt')
             args.sds = fn.replace('.txt','_Sds_postLimma.txt')
             args.ns = fn.replace('.txt','_Ns_postLimma.txt')
         else:
+            print 'Running the Vash commands'
+            args.prefix = 'Vash_'+args.prefix
             path2script = binpath+'Limma_voom_vash_script.R'
             args.means = fn.replace('.txt','_Means_postVash.txt')
             args.sds = fn.replace('.txt','_Sds_postVash.txt')
@@ -158,12 +164,12 @@ def main(args):
 
         df_sds = pd.DataFrame(np.ones(df.shape)*mean,index=df.index,columns=df.columns)
         df_ns =  pd.DataFrame(np.ones(df.shape),index=df.index,columns=df.columns)
-        fn_sds = fn.replace('.txt','_Sds_noRepsEst.txt')
+        fn_sds = fn_null.replace('.txt','_Sds_noRepsEst.txt')
         df_sds.to_csv(fn_sds,na_rep=np.nan,sep='\t')
-        fn_ns = fn.replace('.txt','_Ns_noRepsEst.txt')
+        fn_ns = fn_null.replace('.txt','_Ns_noRepsEst.txt')
         df_sds.to_csv(fn_ns,na_rep=np.nan,sep='\t')
                       
-        args.means = fn
+        args.means = fn_null
         args.sds = fn_sds
         args.ns = fn_ns
     elif args.limma==True:

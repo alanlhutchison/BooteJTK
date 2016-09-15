@@ -85,26 +85,31 @@ tx = as.vector(t(dfa[1,-1]))
 tx<-gsub("X","",tx)
 tx<-gsub("ZT","",tx)
 tx<-gsub("CT","",tx)
-seen= c()
-new = c()
-for (x in tx)
-{
-  if (!(x %in% seen)){
-    seen <- append(seen,x)
-    new <- append(new,x)
-  }
-  else if (x %in% seen){
-    y = x
-    while (y %in% tx){
-      y <- as.character(as.numeric(y)+24)
-      while (y %in% new){
-        y <- as.character(as.numeric(y)+24)
-      }
-    }
-    seen<-append(seen,y)
-    new <- append(new,y)
-  }
+#seen= c()
+#new = c()
+tx <- as.numeric(tx)
+while (sum(duplicated(tx))>0){
+    tx[duplicated(tx)]<- tx[duplicated(tx)]+24
 }
+#for (x in tx)
+#{
+#  if (!(x %in% seen)){
+#    seen <- append(seen,x)
+#    new <- append(new,x)
+#  }
+#  else if (x %in% seen){
+#    y = x
+#    while (y %in% tx){
+#      y <- as.character(as.numeric(y)+24)
+#      while (y %in% new){
+#        y <- as.character(as.numeric(y)+24)
+#      }
+#    }
+#    seen<-append(seen,y)
+#    new <- append(new,y)
+#  }
+#}
+
 #t1<-round((t1-floor(t1))*10*24+floor(t1))
 #t1 <- t1 %% period
 #print(tx)
@@ -137,22 +142,32 @@ f_changeNA <- function(x){
   xx <- apply(x,1,f_nareplace)              
   return(t(xx))}
 
-
+print('t2')
+print(t2)
 for (h in t2){
   times = c(times,rep(h,dim(series)[1]))
 }
-
+#print('series')
+#print(head(series))
 ser.voom = NULL
 for (h in t2){
   #print(h)
   if ( is.null(dim(series[,as.numeric(colnames(series))%%24==h])) ){
-    
+    #print('Singular values')
     #if (bool.rnaseq){ser.voom = voom(ser)} else{ser.voom = vooma(ser)}
     ser.voom$E = series[,as.numeric(colnames(series))%%24==h]
     ser.voom$weights = rep(NaN,dim(series)[1])
+    if (is.null(dim(ser.voom$E))){
+        for (i in c(1:(MAX-1))){
+            ser.voom$weights = cbind(ser.voom$weights,rep(NaN,length(ser.voom$weights)))
+            ser.voom$E = cbind(ser.voom$E,rep(NaN,length(ser.voom$E)))
+        }
+    }
+    
     #mean(ser.voom$weights),dim(ser.voom$weights)[1])
     }
-    else{
+  else{
+      #print('Non-singular values')
       ser = series[,as.numeric(colnames(series))%%24==h]
       
       ser = f_changeNA(ser)
@@ -164,13 +179,15 @@ for (h in t2){
         }
       
   }
-  if (is.numeric(ser.voom$E)){
+  if (is.null(dim(ser.voom$E))){
+      #print('Second singular')
     for (i in c(1:(MAX-1))){
       ser.voom$weights = cbind(ser.voom$weights,rep(NaN,length(ser.voom$weights)))
       ser.voom$E = cbind(ser.voom$E,rep(NaN,length(ser.voom$E)))
     }
   }
   else if(dim(ser.voom$E)[2]!=MAX){
+      #print('Second non-singular')
     for (i in c(1:(MAX-dim(ser)[2]))){
       ser.voom$weights = cbind(ser.voom$weights,rep(NaN,dim(ser.voom$weights)[1]))      
       ser.voom$E = cbind(ser.voom$E,rep(NaN,dim(ser.voom$weights)[1])) 
@@ -181,6 +198,7 @@ for (h in t2){
   #print('Check out ser here!')
   #print(head(ser,2))
   if (is.null(series.new)){
+      #print('First time')
     series.new = ser.voom
     #series.new['ID'] = row.names(series.new)
     #rownames.id = row.names(ser.voom$E)
@@ -193,7 +211,13 @@ for (h in t2){
     #print(length(row.names(ser.voom$E)))
     #rownames.id = c(row.names(ser.voom$E),rownames.id)
     #series.new = rbind(series.new,ser)
-    names(ser.voom$weights) <- names(series.new$weights)    
+    names(ser.voom$weights) <- names(series.new$weights)
+    #print('series.new$weights')
+    #print(dim(series.new$weights))
+    #print(tail(series.new$weights))
+    #print('ser.voom$weights')
+    #print(dim(ser.voom$weights)   )   
+    #print(tail(ser.voom$weights))
     series.new$weights = rbind(series.new$weights,ser.voom$weights)
     names(ser.voom$E) <- names(series.new$E)    
     series.new$E = rbind(series.new$E,ser.voom$E)
@@ -221,7 +245,11 @@ getmode <- function(v) {
   uniqv <- unique(v)
   uniqv[which.max(tabulate(match(v, uniqv)))]
 }
+print('Is the problem here')
 sds.pre = 1/sqrt(series.new$weights[,1])
+print(head(sds.pre))
+sds.pre.nona = sds.pre[!is.na(sds.pre)]
+sds.pre[is.na(sds.pre)] = runif(sum(is.na(sds.pre)),1,length(sds.pre))
 df.vash = getmode(apply(series.new$E,1,f_isna))
 sds.vash = vash(sds.pre,df=df.vash)
 
