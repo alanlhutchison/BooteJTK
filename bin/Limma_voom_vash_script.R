@@ -1,5 +1,5 @@
-  #!/usr/bin/env Rscript
-
+#!/usr/bin/env Rscript
+options(stringsAsFactors=FALSE)
 source("https://bioconductor.org/biocLite.R")
 list.of.packages.bioc <- c("limma")
 new.packages.bioc <- list.of.packages.bioc[!(list.of.packages.bioc %in% installed.packages()[,"Package"])]
@@ -75,7 +75,8 @@ while(sum(duplicated(rownames))>0){
   rownames[duplicated(rownames)] <- paste0(rownames[duplicated(rownames)],'-xxx',as.character(counter))
   counter = counter + 1
 }
-
+#print('Duplicates?')
+#print(sum(duplicated(rownames)))
 
 row.names(df) = rownames
 df = df[,-1]
