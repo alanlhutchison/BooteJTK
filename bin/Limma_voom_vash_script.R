@@ -166,14 +166,14 @@ for (h in t2){
   }
   if (is.numeric(ser.voom$E)){
     for (i in c(1:(MAX-1))){
-      ser.voom$weights = cbind(ser.voom$weights,rep(NaN,length(ser)))
-      ser.voom$E = cbind(ser.voom$E,rep(NaN,length(ser)))
+      ser.voom$weights = cbind(ser.voom$weights,rep(NaN,length(ser.voom$weights)))
+      ser.voom$E = cbind(ser.voom$E,rep(NaN,length(ser.voom$E)))
     }
   }
   else if(dim(ser.voom$E)[2]!=MAX){
     for (i in c(1:(MAX-dim(ser)[2]))){
-      ser.voom$weights = cbind(ser.voom$weights,rep(NaN,dim(ser)[1]))      
-      ser.voom$E = cbind(ser.voom$E,rep(NaN,dim(ser)[1])) 
+      ser.voom$weights = cbind(ser.voom$weights,rep(NaN,dim(ser.voom$weights)[1]))      
+      ser.voom$E = cbind(ser.voom$E,rep(NaN,dim(ser.voom$weights)[1])) 
       #ser=cbind(ser,rep(NaN,dim(ser)[1]))   
       #ser = data.frame(ser)
     }
