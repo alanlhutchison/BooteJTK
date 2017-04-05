@@ -20,7 +20,7 @@ This code uses 10 bootstrap resamplings for data that has 2 replicates. It searc
 
 <pre><code>./BooteJTK-CalcP.py -f example/TestInput4.txt -p ref_files/period24.txt -s ref_files/phases_00-22_by2.txt -a ref_files/asymmetries_02-22_by2.txt -x OTHERTEXT -r 2 -z 10</code></pre>
 
-1. **example/TestInput4_OTHERTEXT_boot19-rep2_GammaP.txt**
+1. **example/TestInput4_OTHERTEXT_boot10-rep2_GammaP.txt**
 
    This is the output of BooteJTK with a Gamma fit of the null dataset used to assign p-values to the Tau values from running BooteJTK.
 
