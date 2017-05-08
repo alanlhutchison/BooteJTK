@@ -66,6 +66,15 @@ def main(args):
     size = int(args.size)
     reps = int(args.reps)
 
+
+    if args.basic==False:
+        args.limma==True
+        args.vash ==True
+    elif args.basic==True and args.limma==True and args.vash==False:
+        args.limma=True
+        args.vash =False
+
+        
     #fn_null = args.null
     if args.noreps==True:
         args.prefix = 'NoRepSD_'+args.prefix
@@ -379,6 +388,12 @@ def __create_parser__():
                           type=str,
                           action='store',
                           help="The eJTK file to use if you don't have replicates in in your time series. The standard deviation between points will be estimated based on the arrhythmic time series.")
+
+    analysis.add_argument("-B","--basic",
+                          dest="basic",
+                          action='store_true',
+                          default=False,
+                          help='Flag for not using the limma or vash settings')
 
     
     
