@@ -92,14 +92,15 @@ def generate_base_reference(header,waveform="cosine",double period=24.,double ph
 
         def cosine(double x,double w):
             cdef double y
-            x = x % (2*np.pi)
-            w = w % (2*np.pi)
+            x = x % (2.*np.pi)
+            w = w % (2.*np.pi)
             if x <= w:
                 y = np.cos(x/(w/np.pi))
             elif x > w:
                 y = np.cos( (x+2.*(np.pi-w))*np.pi/ (2*np.pi - w) )
             return y
         f_wav = cosine
+        
     elif waveform=='trough':
         def trough(double x,double w):
             cdef double y
@@ -111,6 +112,26 @@ def generate_base_reference(header,waveform="cosine",double period=24.,double ph
                 y = (x-w)/(2*np.pi - w)
             return y
         f_wav = trough
+
+    elif waveform=='impulse':
+        def impulse(double x, _):
+            cdef double w,d,y
+            w = 3.*np.pi/4.
+            x = x % (2.*np.pi)
+            d = min(x, np.abs(np.pi*2 - x))
+            y = max(-2.*d/w + 1.0, 0.0)
+            return y
+        f_wav = impulse
+        
+    elif waveform=='step':
+        def step(double x, _):
+            cdef double w,y
+            w = np.pi
+            x = x % (2.*np.pi)
+            y = 1.0 if x < w else 0.0
+            return y
+        f_wav = step
+
         
     reference = [f_wav(tpoint,w) for tpoint in tpoints]
     return reference
