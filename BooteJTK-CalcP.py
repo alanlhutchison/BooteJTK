@@ -66,14 +66,23 @@ def main(args):
     size = int(args.size)
     reps = int(args.reps)
 
-
+    try:
+        assert '.txt' in fn or '.txt' in args.means
+    except AssertionError:
+        print 'Please make the suffix of your raw data file or means file  .txt'
+        assert 0
+    
+    
     if args.basic==False:
-        args.limma==True
-        args.vash ==True
+        args.limma=True
+        args.vash =True
     elif args.basic==True and args.limma==True and args.vash==False:
         args.limma=True
         args.vash =False
 
+    print 'Basic:', args.basic
+    print 'Limma:', args.limma
+    print 'Vash:', args.vash
         
     #fn_null = args.null
     if args.noreps==True:
@@ -104,14 +113,14 @@ def main(args):
     elif args.limma==True:
 
         """Rscript command for Limma"""
-        if args.vash==False:
+        if args.vash==False and fn is not None:
             print 'Running the Limma commands'
             args.prefix = 'Limma_'+args.prefix
             path2script = binpath+'Limma_voom_script.R'
             args.means = fn.replace('.txt','_Means_postLimma.txt')
             args.sds = fn.replace('.txt','_Sds_postLimma.txt')
             args.ns = fn.replace('.txt','_Ns_postLimma.txt')
-        else:
+        elif args.vash==True and fn is not None:
             print 'Running the Vash commands'
             args.prefix = 'Vash_'+args.prefix
             path2script = binpath+'Limma_voom_vash_script.R'
@@ -137,7 +146,9 @@ def main(args):
                 print "Command failed with return code", ret
             assert False
     else:
+        print 'Using neither Limma nor Vash'
         pass
+    
     fn_out,fn_out_pkl,header = BooteJTK.main(args)
 
     #args.output = fn_out.replace('boot','NULL1000-boot')
@@ -157,6 +168,7 @@ def main(args):
             g.write('\t'.join(line)+'\n')
             
     args.filename = fn_null
+    
     if args.noreps==True:
         print 'No replicates, skipping Limma procedure'
         print 'Estimating time point variance from arrhythmic genes'
@@ -264,6 +276,7 @@ def __create_parser__():
                    action='store',
                    metavar="filename string",
                    type=str,
+                    default='DEFAULT',
                    help='This is the filename of the data series you wish to analyze.\
                    The data should be tab-spaced. The first row should contain a # sign followed by the time points with either CT or ZT preceding the time point (such as ZT0 or ZT4). Longer or shorter prefixes will not work. The following rows should contain the gene/series ID followed by the values for every time point. Where values are not available NA should be put in it\'s place.')
     analysis.add_argument("-F", "--means",
@@ -395,6 +408,11 @@ def __create_parser__():
                           default=False,
                           help='Flag for not using the limma or vash settings')
 
+    analysis.add_argument("-W", "--write",
+                   dest="write",
+                   action='store_true',
+                   default=False,
+                   help='If you want pickle output from BooteJTK, use this flag.')
     
     
 
