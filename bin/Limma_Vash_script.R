@@ -11,6 +11,8 @@ list.of.packages.reg <- c("reshape","reshape2","devtools",'qvalue')
 new.packages.reg <- list.of.packages.reg[!(list.of.packages.reg %in% installed.packages()[,"Package"])]
 if(length(new.packages.reg)>0) install.packages(new.packages.reg,repos='http://cran.us.r-project.org')
 
+install.packages('qvalue')
+
 library('limma')
 library('reshape2')
 library('reshape')

@@ -1,16 +1,14 @@
-#!/usr/bin/env Rscript
-### When there is internet connectivity should un-comment these
-options(stringsAsFactors=FALSE)
+  #!/usr/bin/env Rscript
+
 source("https://bioconductor.org/biocLite.R")
-list.of.packages.bioc <- c("limma","qvalue")
+list.of.packages.bioc <- c("limma")
 new.packages.bioc <- list.of.packages.bioc[!(list.of.packages.bioc %in% installed.packages()[,"Package"])]
 if(length(new.packages.bioc)>0) biocLite(new.packages.bioc,ask=FALSE)
 
-list.of.packages.reg <- c("reshape","reshape2","devtools")
+list.of.packages.reg <- c("reshape","reshape2")
 new.packages.reg <- list.of.packages.reg[!(list.of.packages.reg %in% installed.packages()[,"Package"])]
 if(length(new.packages.reg)>0) install.packages(new.packages.reg,repos='http://cran.us.r-project.org')
 
-#install.packages('qvalue')
 
 # library("optparse")
 # option_list = list(
@@ -38,10 +36,10 @@ library('reshape')
 library('qvalue')
 library('devtools')
 
-install_github("stephens999/ashr",build_vignettes=FALSE)
+#install_github("stephens999/ashr",build_vignettes=FALSE)
 library('ashr')
 
-install_github("mengyin/vashr",build_vignettes=FALSE)
+#install_github("mengyin/vashr",build_vignettes=FALSE)
 library('vashr')
 
 
@@ -54,10 +52,10 @@ period = as.numeric(args[3])
 if (length(args)>3){bool.rnaseq = TRUE}else{bool.rnaseq=FALSE}
 
 print(paste0('bool.rnaseq is ',bool.rnaseq))
-#fn = '~/Desktop/real_data_large/Robles2/Zhang_Liver_Roble-trimmed_GeneID_jtkready.txt'
-#pre = '~/Desktop/real_data_large/Robles2/Zhang_Liver_Roble-trimmed_GeneID_jtkready'
-#period = 24
-#bool.rnaseq = FALSE
+fn = '~/Desktop/real_data_large/Hughes3/Hughes48_trimmed_by2-1.jtkready.txt'
+pre = 'Hughes'
+period = 24
+bool.rnaseq = FALSE
 ## program...
 # print(fn)
 # print(class(fn))
@@ -72,14 +70,6 @@ df = read.csv(fn,header=TRUE,sep='\t')
 #period = 24
 rownames = df[,1]
 
-counter = 1
-while(sum(duplicated(rownames))>0){
-  rownames[duplicated(rownames)] <- paste0(rownames[duplicated(rownames)],'-xxx',as.character(counter))
-  counter = counter + 1
-}
-#print('Duplicates?')
-#print(sum(duplicated(rownames)))
-
 row.names(df) = rownames
 df = df[,-1]
 dfa = read.csv(fn,sep='\t',header=FALSE)
@@ -87,31 +77,26 @@ tx = as.vector(t(dfa[1,-1]))
 tx<-gsub("X","",tx)
 tx<-gsub("ZT","",tx)
 tx<-gsub("CT","",tx)
-#seen= c()
-#new = c()
-tx <- as.numeric(tx)
-while (sum(duplicated(tx))>0){
-    tx[duplicated(tx)]<- tx[duplicated(tx)]+24
+seen= c()
+new = c()
+for (x in tx)
+{
+  if (!(x %in% seen)){
+    seen <- append(seen,x)
+    new <- append(new,x)
+  }
+  else if (x %in% seen){
+    y = x
+    while (y %in% tx){
+      y <- as.character(as.numeric(y)+24)
+      while (y %in% new){
+        y <- as.character(as.numeric(y)+24)
+      }
+    }
+    seen<-append(seen,y)
+    new <- append(new,y)
+  }
 }
-#for (x in tx)
-#{
-#  if (!(x %in% seen)){
-#    seen <- append(seen,x)
-#    new <- append(new,x)
-#  }
-#  else if (x %in% seen){
-#    y = x
-#    while (y %in% tx){
-#      y <- as.character(as.numeric(y)+24)
-#      while (y %in% new){
-#        y <- as.character(as.numeric(y)+24)
-#      }
-#    }
-#    seen<-append(seen,y)
-#    new <- append(new,y)
-#  }
-#}
-
 #t1<-round((t1-floor(t1))*10*24+floor(t1))
 #t1 <- t1 %% period
 #print(tx)
@@ -125,74 +110,31 @@ t2 = unique(as.numeric(tx)%%24)
 t2 = sort(t2)
 print(series[1:3,1:3])
 rownames.id = rep(row.names(series),length(t2))
-
-
-f_changeNA <- function(x){
-  sd = median(apply(x,1,function(y) sd(y,na.rm=TRUE)),na.rm=TRUE)
-  m = mean(apply(ser,2,function(x) mean(x,na.rm=TRUE)),na.rm=TRUE)
-  sd.m = sd(apply(ser,2,function(x) mean(x,na.rm=TRUE)),na.rm=TRUE)
-  f_nareplace <- function(z){
-    #f_max = function(x) {return(max(x,1e-4))}
-    if (is.na(mean(z,na.rm=TRUE))){
-      z<-rnorm(length(z),m,sd.m)
-    }
-    else if (sum(is.na(z))>0){
-      z[is.na(z)]<-rnorm(sum(is.na(z)),mean(z,na.rm=T),sd)
-    }
-    return(z)
-  }
-  xx <- apply(x,1,f_nareplace)              
-  return(t(xx))}
-
-print('t2')
-print(t2)
 for (h in t2){
   times = c(times,rep(h,dim(series)[1]))
 }
-#print('series')
-#print(head(series))
-ser.voom = NULL
-for (h in t2){
+for (h in t2[1]){
   #print(h)
   if ( is.null(dim(series[,as.numeric(colnames(series))%%24==h])) ){
-    #print('Singular values')
-    #if (bool.rnaseq){ser.voom = voom(ser)} else{ser.voom = vooma(ser)}
+    if (bool.rnaseq){ser.voom = voom(ser)} else{ser.voom = vooma(ser)}
     ser.voom$E = series[,as.numeric(colnames(series))%%24==h]
-    ser.voom$weights = rep(NaN,dim(series)[1])
-    if (is.null(dim(ser.voom$E))){
-        for (i in c(1:(MAX-1))){
-            ser.voom$weights = cbind(ser.voom$weights,rep(NaN,length(ser.voom$weights)))
-            ser.voom$E = cbind(ser.voom$E,rep(NaN,length(ser.voom$E)))
-        }
+    ser.voom$weights = rep(mean(ser.voom$weights),dim(ser.voom$weights)[1])
     }
-    
-    #mean(ser.voom$weights),dim(ser.voom$weights)[1])
-    }
-  else{
-      #print('Non-singular values')
+    else{
       ser = series[,as.numeric(colnames(series))%%24==h]
-      
-      ser = f_changeNA(ser)
-      
-      if (bool.rnaseq){
-        ser.voom = voom(ser)      
-      } else{
-        ser.voom = vooma(ser)        
-        }
-      
+      if (bool.rnaseq){ser.voom = voom(ser)} else{ser.voom = vooma(ser)}
   }
-  if (is.null(dim(ser.voom$E))){
-      #print('Second singular')
+  
+  if (class(ser.voom$E)=='numeric'){
     for (i in c(1:(MAX-1))){
-      ser.voom$weights = cbind(ser.voom$weights,rep(NaN,length(ser.voom$weights)))
-      ser.voom$E = cbind(ser.voom$E,rep(NaN,length(ser.voom$E)))
+      ser.voom$weights = cbind(ser.voom$weights,rep(NaN,length(ser)))
+      ser.voom$E = cbind(ser.voom$E,rep(NaN,length(ser)))
     }
   }
   else if(dim(ser.voom$E)[2]!=MAX){
-      #print('Second non-singular')
     for (i in c(1:(MAX-dim(ser)[2]))){
-      ser.voom$weights = cbind(ser.voom$weights,rep(NaN,dim(ser.voom$weights)[1]))      
-      ser.voom$E = cbind(ser.voom$E,rep(NaN,dim(ser.voom$weights)[1])) 
+      ser.voom$weights = cbind(ser.voom$weights,rep(NaN,dim(ser)[1]))      
+      ser.voom$E = cbind(ser.voom$E,rep(NaN,dim(ser)[1])) 
       #ser=cbind(ser,rep(NaN,dim(ser)[1]))   
       #ser = data.frame(ser)
     }
@@ -200,7 +142,6 @@ for (h in t2){
   #print('Check out ser here!')
   #print(head(ser,2))
   if (is.null(series.new)){
-      #print('First time')
     series.new = ser.voom
     #series.new['ID'] = row.names(series.new)
     #rownames.id = row.names(ser.voom$E)
@@ -213,13 +154,7 @@ for (h in t2){
     #print(length(row.names(ser.voom$E)))
     #rownames.id = c(row.names(ser.voom$E),rownames.id)
     #series.new = rbind(series.new,ser)
-    names(ser.voom$weights) <- names(series.new$weights)
-    #print('series.new$weights')
-    #print(dim(series.new$weights))
-    #print(tail(series.new$weights))
-    #print('ser.voom$weights')
-    #print(dim(ser.voom$weights)   )   
-    #print(tail(ser.voom$weights))
+    names(ser.voom$weights) <- names(series.new$weights)    
     series.new$weights = rbind(series.new$weights,ser.voom$weights)
     names(ser.voom$E) <- names(series.new$E)    
     series.new$E = rbind(series.new$E,ser.voom$E)
@@ -247,11 +182,7 @@ getmode <- function(v) {
   uniqv <- unique(v)
   uniqv[which.max(tabulate(match(v, uniqv)))]
 }
-print('Is the problem here')
 sds.pre = 1/sqrt(series.new$weights[,1])
-print(head(sds.pre))
-sds.pre.nona = sds.pre[!is.na(sds.pre)]
-sds.pre[is.na(sds.pre)] = runif(sum(is.na(sds.pre)),1,length(sds.pre))
 df.vash = getmode(apply(series.new$E,1,f_isna))
 sds.vash = vash(sds.pre,df=df.vash)
 
@@ -279,8 +210,6 @@ series.new['Mean'] = apply(series.act$E,1,fmean)
 series.new['SD'] = sds.vash$sd.post
 series.new['SDpre'] = sds.pre
 series.new['Time'] = times
-#rownames.id <- as.vector(sapply(rownames.id,function(x) strsplit(x,'-xxx1')[[1]][1]))
-
 series.new['ID'] = rownames.id # gsub('at.*','at',rownames)
 series.new['N'] = apply(series.act,1,length)
 
@@ -310,16 +239,16 @@ sdspre = dcast(series.melt[series.melt$variable=='SDpre',],ID ~ Time ,value.var=
 print('Means')
 print(means[1:3,1:3])
   
-means_out = paste0(pre,'_Means_postVash.txt')
-sds_out   = paste0(pre,'_Sds_postVash.txt')
-ns_out    = paste0(pre,'_Ns_postVash.txt')
-sdspre_out = paste0(pre,'_Sds-pre_postVash.txt')
+means_out = paste0(pre,'_Means_postLimma.txt')
+sds_out   = paste0(pre,'_Sds_postLimma.txt')
+ns_out    = paste0(pre,'_Ns_postLimma.txt')
+sdspre_out = paste0(pre,'_Sds-pre_postLimma.txt')
 
 
 write.table(means,file=means_out,sep='\t',row.names = FALSE, col.names = TRUE,quote=FALSE)
 write.table(sds,  file=sds_out,sep='\t',  row.names = FALSE, col.names = TRUE,quote=FALSE)
 write.table(ns,   file=ns_out,sep='\t',   row.names = FALSE, col.names = TRUE,quote=FALSE)
 write.table(sdspre,  file=sdspre_out,sep='\t',  row.names = FALSE, col.names = TRUE,quote=FALSE)
-print('Limma_voom_vash_script.R complete')
+print('Limma_voom_script.R complete')
 
 

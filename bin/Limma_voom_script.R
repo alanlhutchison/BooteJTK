@@ -1,4 +1,4 @@
-#!/usr/bin/env Rscript
+  #!/usr/bin/env Rscript
 
 source("https://bioconductor.org/biocLite.R")
 list.of.packages.bioc <- c("limma")
@@ -42,10 +42,10 @@ period = as.numeric(args[3])
 if (length(args)>3){bool.rnaseq = TRUE}else{bool.rnaseq=FALSE}
 
 print(paste0('bool.rnaseq is ',bool.rnaseq))
-#fn = '~/Desktop/Allada_raw/adjcounts/by2/reps/HC18_FatBody_ZT_ADJcounts_jtkready.txt'
-#pre = 'Allada_HC18_FatBody'
-#period = 24
-#bool.rnaseq = TRUE
+fn = '~/Desktop/real_data_large/Hughes3/Hughes48_trimmed_by2-1.jtkready.txt'
+pre = 'Hughes'
+period = 24
+bool.rnaseq = FALSE
 ## program...
 # print(fn)
 # print(class(fn))
@@ -210,7 +210,7 @@ sdspre = dcast(series.melt[series.melt$variable=='SDpre',],ID ~ Time ,value.var=
 
 print('Means')
 print(means[1:3,1:3])
-
+  
 means_out = paste0(pre,'_Means_postLimma.txt')
 sds_out   = paste0(pre,'_Sds_postLimma.txt')
 ns_out    = paste0(pre,'_Ns_postLimma.txt')

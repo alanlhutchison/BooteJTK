@@ -58,13 +58,16 @@ def main(args):
     fn_null_list = args.null_list # These are geneIDs to be used to estimate the SD
     size = int(args.size)
     reps = int(args.reps)
+    write_pickle = args.write
 
+    
     ### If no list file set id_list to empty
     id_list = read_in_list(fn_list) if fn_list.split('/')[-1]!='DEFAULT' else []
     null_list = read_in_list(fn_null_list) if fn_null_list.split('/')[-1]!='DEFAULT' else []
         
     ### If no pkl out file, modify the option variable
     opt = 'premade' if os.path.isfile(fn_out_pkl) and fn_out_pkl.split('/')[-1]!='DEFAULT' else ''
+
     ### If not given a new name, name fn_out after the fn file
     if fn_out.split('/')[-1] == "DEFAULT":
         endstr = '_{0}_boot{1}-rep{2}.txt'.format(prefix,int(size),int(reps))
@@ -154,6 +157,7 @@ def main(args):
 
     id_list = d_series.keys() if id_list==[] else id_list
     out_lines = []
+
     for geneID in d_data_master:
 
         ### If we have an ID list, we only want to deal with data from it.
@@ -179,8 +183,8 @@ def main(args):
             if 'premade' not in opt:
                 d_data_sub = {geneID:d_data_master[geneID]}
                 d_data_master1 = dict(d_data_master1.items()+d_data_sub.items())
-                
-                d_order_probs,d_boots = get_order_prob(d_data_sub,size,reps)
+                #print 'd_data_sub[0] is', d_data_sub[d_data_sub.keys()[0]]
+                d_order_probs,d_boots = get_order_prob(d_data_sub,size)
                 d_order_probs_master = dict(d_order_probs_master.items()+d_order_probs.items())
                 d_boots_master = dict(d_boots_master.items()+d_boots.items())
                 
@@ -197,18 +201,26 @@ def main(args):
 
         
         if len(remaining)>0:
-            fn_remaining = fn_out.replace('.txt','_remaining_list.txt')
-            with open(fn_remaining,'w') as g:
-                for r in remaining:
-                    g.write(r+'\n')
-    pickle.dump([d_tau,d_ph],open(fn_out_pkl_vars,'wb'))                    
-    pickle.dump([d_data_master1,d_order_probs_master,d_boots_master],open(fn_out_pkl,'wb'))
-    #print out_lines
+            if '.txt' in fn_out:
+                fn_remaining = fn_out.replace('.txt','_remaining_list.txt')
+            else:
+                fn_remaining = fn_out+'_remaining_list.txt'
+            g = open(fn_remaining,'a')
+            for r in remaining:
+                g.write(r+'\n')
+            g.close()
+            
+    if write_pickle==True: 
+        pickle.dump([d_tau,d_ph],open(fn_out_pkl_vars,'wb'))                    
+        pickle.dump([d_data_master1,d_order_probs_master,d_boots_master],open(fn_out_pkl,'wb'))
+    else:
+        print 'Not writing out pickle results'
+
     taus = [[i,float(out[-2])] for i,out in enumerate(out_lines)]
     taus = sorted(taus,key=lambda x: np.abs(x[1]),reverse=True)
-    #print taus
+
     indexes = np.array([i[0] for i in taus])
-    #print indexes
+
     out_lines = np.array(out_lines)[np.array(indexes)]
     g = open(fn_out,'a')
     g.write("ID\tWaveform\tPeriodMean\tPeriodStdDev\tPhaseMean\tPhaseStdDev\tNadirMean\tNadirStdDev\tMean\tStd_Dev\tMax\tMin\tMax_Amp\tFC\tIQR_FC\tNumBoots\tTauMean\tTauStdDev\n")
@@ -237,16 +249,16 @@ def read_in_EMdata(fn):
     return WT
 
 
-def get_SD_distr(dseries,reps,size):
-    data = np.zeros(size)
-    for j in xrange(size):
-        ser = []
-        for i in xrange(len(dseries[0])):
-            ser.append(np.random.normal(dseries[0][i],dseries[1][i],size=reps))
-        ser = np.concatenate(ser)
-        SD = np.std(ser)
-        data[j] = SD
-    return data
+#def get_SD_distr(dseries,reps,size):
+#    data = np.zeros(size)
+#    for j in xrange(size):
+#        ser = []
+#        for i in xrange(len(dseries[0])):
+#            ser.append(np.random.normal(dseries[0][i],dseries[1][i],size=reps))
+#        ser = np.concatenate(ser)
+#        SD = np.std(ser)
+#        data[j] = SD
+#    return data
 
 
 def append_out(fn_out,line):
@@ -284,7 +296,8 @@ def read_in(fn):
                 header = words[1:]
             else:
                 if start_right == 0:
-                    print "Please enter file with header starting with #"
+                    print "Please enter file with header starting with # or ID"
+                    exit
                 elif start_right == 1:
                     data.append(words)
     return header, data
@@ -538,15 +551,16 @@ def eBayes(d_data,D_null={}):
     for key in d_data:
         d_data[key][1]=[posterior_s(d0,s0,d_data[key][1][i],d_data[key][2][i]) for i in xrange(len(d_data[key][1]))  ]
         d_data[key][2]=[1 for i in xrange(len(d_data[key][1]))  ]
-    print d0,s0
+    #print d0,s0
     return d_data
 
-def get_order_prob(d_data,size,reps):
+def get_order_prob(d_data,size):
     ### WE WANT TO CHANGE HOW REPS GET INCORPORATED...
     d_order_prob = {}
     d_boots = {}
     for key in d_data:
         res = d_data[key]
+        #print 'res is', res
         d_order_prob[key],d_boots[key]=dict_of_orders(res[0],res[1],res[2],size)        
         #d_order_prob[key],d_boots[key]=dict_of_orders(list(res[0])*reps,list(res[1])*reps,list(res[2])*reps,size)
     return d_order_prob,d_boots
@@ -573,8 +587,10 @@ def dict_order_probs(ms,sds,ns,size=100):
     """ Create array for bootstraps of time series """
     s3 = np.zeros((size,len(sds)))
     """ Fill array time point by time point """
+    #print ms,sds
     for i in xrange(len(sds)):
         s3[:,i] = np.random.normal(ms[i],sds[i],size=size)
+
     """ Turn into ranks for storage """
     for s in s3:
         r=tuple(map(int,rankdata(s)))
@@ -666,6 +682,14 @@ def __create_parser__():
                    type=str,
                    help='This is the filename of the time point replicate numbers of the data series you wish to analyze. \
                    The data should be tab-spaced. The first row should contain a # sign followed by the time points with either CT or ZT preceding the time point (such as ZT0 or ZT4). Longer or shorter prefixes will not work. The following rows should contain the gene/series ID followed by the values for every time point. Where values are not available NA should be put in it\'s place.')
+
+    analysis.add_argument("-W", "--write",
+                   dest="write",
+                   action='store_true',
+                   metavar="Boolean",
+                    default=False,
+                          help='If you want pickle output from BooteJTK, use this flag.')
+
     
     
 
