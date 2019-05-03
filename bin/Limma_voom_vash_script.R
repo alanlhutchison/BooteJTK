@@ -123,7 +123,7 @@ series.new = NULL
 times = c()
 t2 = unique(as.numeric(tx)%%24)
 t2 = sort(t2)
-print(series[1:3,1:3])
+#print(series[1:3,1:3])
 rownames.id = rep(row.names(series),length(t2))
 
 
@@ -144,8 +144,8 @@ f_changeNA <- function(x){
   xx <- apply(x,1,f_nareplace)              
   return(t(xx))}
 
-print('t2')
-print(t2)
+#print('t2')
+#print(t2)
 for (h in t2){
   times = c(times,rep(h,dim(series)[1]))
 }
@@ -247,9 +247,9 @@ getmode <- function(v) {
   uniqv <- unique(v)
   uniqv[which.max(tabulate(match(v, uniqv)))]
 }
-print('Is the problem here')
+#print('Is the problem here')
 sds.pre = 1/sqrt(series.new$weights[,1])
-print(head(sds.pre))
+#print(head(sds.pre))
 sds.pre.nona = sds.pre[!is.na(sds.pre)]
 sds.pre[is.na(sds.pre)] = runif(sum(is.na(sds.pre)),1,length(sds.pre))
 df.vash = getmode(apply(series.new$E,1,f_isna))
@@ -309,7 +309,8 @@ sdspre = dcast(series.melt[series.melt$variable=='SDpre',],ID ~ Time ,value.var=
 
 print('Means')
 print(means[1:3,1:3])
-  
+print('SDs')
+print(sds[1:3,1:3])
 means_out = paste0(pre,'_Means_postVash.txt')
 sds_out   = paste0(pre,'_Sds_postVash.txt')
 ns_out    = paste0(pre,'_Ns_postVash.txt')

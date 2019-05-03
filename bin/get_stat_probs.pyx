@@ -234,6 +234,8 @@ def get_matches(kkey,triple,d_ref,new_header):
     cdef double period,phase,width,nadir,tau,p
     
     reference = d_ref[tuple(triple)]
+    reference = map(float,reference)
+    kkey = map(float,kkey)
     period,phase,width = triple
     nadir = (phase+width)%period
     serie = kkey
