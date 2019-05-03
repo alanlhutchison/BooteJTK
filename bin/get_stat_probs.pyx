@@ -239,8 +239,8 @@ def get_matches(kkey,triple,d_ref,new_header):
     period,phase,width = triple
     nadir = (phase+width)%period
     serie = kkey
-    print reference
-    print serie
+    #print reference
+    #print serie
     tau,p = kt(reference,serie)#generate_mod_series(reference,serie)
     p = p/2.0
     tau = farctanh(tau)
