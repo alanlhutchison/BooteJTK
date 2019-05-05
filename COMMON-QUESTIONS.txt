@@ -1,0 +1,16 @@
+Q: We’re trying to run it on samples with uneven intervals 14.7, 15.3 etc. in addtion to every 2 h samples.  Can you even enter a time of ZT14.7 or will it only handle 4 characters I.e., ZT14.
+
+A: Yes ZT14.7 will be read in no problem. All it needs is for the first two characters to be ZT or CT.
+
+Q: Also we were wondering if you have uneven intervals including those above does the Kendall’s Tau reflect those samples or does it just deal with every 2 h.
+
+A: The code will deal with all the time points you give it.
+
+Q: Why does boot eJTK report phases of 0 and 24? Why phases to 14.4 —with just 2 h sampling intervals?
+
+A: BooteJTK runs bootstrap resampling of the time series, and runs eJTK on those resamples. So if it runs 10 resamples, and 8 have phase 14 and 2 have phase 16, then the reported mean phase would be 14.4.
+
+Q: When searching for asymmetries and phases, it is searching at certain intervals but do these intervals need to match sampling intervals.  And what is the sampling interval is uneven as described in my prior email?
+
+A: Correct. The intervals it searches do not need to line up with the sampling intervals. In the same way, you could sample every hour but only look for phases every two hours.
+
