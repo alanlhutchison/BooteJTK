@@ -96,14 +96,22 @@ def main(args):
     """ Read in the data """
     header,data = read_in(fn)
     d_series = dict_data(data)
+
+    periods = np.array(read_in_list(fn_period),dtype=int)
+    period = float(periods[0])
+    phases = np.array(read_in_list(fn_phase),dtype=int)
+    widths = np.array(read_in_list(fn_width),dtype=int)
+
+    waveform = 'cosine'
+    
     if fn_means.split('/')[-1]!='DEFAULT' and fn_sds.split('/')[-1]!='DEFAULT' and fn_ns.split('/')[-1]!='DEFAULT':
         print 'Taking Limma/noreps input'
         header2,means = read_in(fn_means)
         _,sds = read_in(fn_sds)
         _,ns = read_in(fn_ns)
-        d_data_master,new_header = get_data_multi(header,header2,means,sds,ns)
+        d_data_master,new_header = get_data_multi(header,header2,means,sds,ns,period)
     else:
-        d_data_master,new_header = get_data2(header,data)
+        d_data_master,new_header = get_data2(header,data,period)
         
         #new_header = list(new_header)*reps
     
@@ -133,9 +141,6 @@ def main(args):
     fn_out_pkl = add_on_out(fn_out_pkl)
     fn_out_pkl_vars = add_on_out(fn_out_pkl_vars)    
 
-    periods = np.array(read_in_list(fn_period),dtype=int)
-    phases = np.array(read_in_list(fn_phase),dtype=int)
-    widths = np.array(read_in_list(fn_width),dtype=int)
 
     waveform = 'cosine'
 
@@ -390,9 +395,9 @@ def generate_mod_series(reference,series):
 ### HERE WE INSERT BOOT FUNCTIONS
 ##################################
 
-def get_data(header,data):
+def get_data(header,data,period):
     """This function does not use the header information to set the number of replicates """
-    new_h = [float(h[2:])%24 if 'ZT' in h or 'CT' in h else float(h)%24 for h in header]
+    new_h = [float(h[2:])%period if 'ZT' in h or 'CT' in h else float(h)%period for h in header]
     #print new_h
     length = len(new_h)
     seen = []
@@ -424,9 +429,9 @@ def get_data(header,data):
     return d_data,seen
 
 
-def get_data2(header,data):
+def get_data2(header,data,period):
     """ This function uses the header information to set the number of replicates"""
-    new_h = [float(h[2:])%24 if 'ZT' in h or 'CT' in h else float(h)%24 for h in header]
+    new_h = [float(h[2:])%period if 'ZT' in h or 'CT' in h else float(h)%period for h in header]
     length = len(new_h)
     seen = []
     dref = {}
@@ -457,10 +462,10 @@ def get_data2(header,data):
 
 
 
-def get_data_multi(header,header2,data,sds,ns):
+def get_data_multi(header,header2,data,sds,ns,period):
     """ This function takes in several pre-eBayes files to create the d_data dictionary"""
-    new_h = [float(h[2:])%24 if 'ZT' in h or 'CT' in h else float(h)%24 for h in header]
-    h2 = [float(h[2:])%24 if 'ZT' in h or 'CT' in h else float(h)%24 for h in header2]    
+    new_h = [float(h[2:])%period if 'ZT' in h or 'CT' in h else float(h)%period for h in header]
+    h2 = [float(h[2:])%period if 'ZT' in h or 'CT' in h else float(h)%period for h in header2]    
     length = len(new_h)
     seen = []
     dref = {}

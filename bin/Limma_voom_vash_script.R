@@ -18,7 +18,7 @@ if(length(new.packages.reg)>0) install.packages(new.packages.reg,repos='http://c
 #               help="dataset file name", metavar="character"),
 #   make_option(c("-o", "--out"), type="character", default="out.txt", 
 #               help="output file name [default= %default]", metavar="character")
-#   make_option(c("-p", "--period"), type="integer", default=24,
+#   make_option(c("-p", "--period"), type="integer", default=period,
 #               help="period length [default= %default]", metavar="integer")
 # ); 
 # 
@@ -50,6 +50,9 @@ args = commandArgs(trailingOnly=TRUE)
 fn = args[1]
 pre = args[2]
 period = as.numeric(args[3])
+#print('period is')
+#print(args[3])
+#print(period)
 
 if (length(args)>3){bool.rnaseq = TRUE}else{bool.rnaseq=FALSE}
 
@@ -91,7 +94,7 @@ tx<-gsub("CT","",tx)
 #new = c()
 tx <- as.numeric(tx)
 while (sum(duplicated(tx))>0){
-    tx[duplicated(tx)]<- tx[duplicated(tx)]+24
+    tx[duplicated(tx)]<- tx[duplicated(tx)]+period
 }
 #for (x in tx)
 #{
@@ -102,9 +105,9 @@ while (sum(duplicated(tx))>0){
 #  else if (x %in% seen){
 #    y = x
 #    while (y %in% tx){
-#      y <- as.character(as.numeric(y)+24)
+#      y <- as.character(as.numeric(y)+period)
 #      while (y %in% new){
-#        y <- as.character(as.numeric(y)+24)
+#        y <- as.character(as.numeric(y)+period)
 #      }
 #    }
 #    seen<-append(seen,y)
@@ -112,16 +115,24 @@ while (sum(duplicated(tx))>0){
 #  }
 #}
 
-#t1<-round((t1-floor(t1))*10*24+floor(t1))
+#t1<-round((t1-floor(t1))*10*period+floor(t1))
 #t1 <- t1 %% period
 #print(tx)
 colnames(df) <- as.numeric(tx)
 series = df
-MAX = max(table(as.numeric(colnames(series))%%24))
+MAX = max(table(as.numeric(colnames(series))%%period))
+#print(period)
 #print(MAX)
+#print(series)
+#print(colnames(series))
+#print(as.numeric(colnames(series)))
+#print(table(as.numeric(colnames(series))))
+#print(table(as.numeric(colnames(series)))%%period)
+#print(max(table(as.numeric(colnames(series))%%period)))
+
 series.new = NULL
 times = c()
-t2 = unique(as.numeric(tx)%%24)
+t2 = unique(as.numeric(tx)%%period)
 t2 = sort(t2)
 #print(series[1:3,1:3])
 rownames.id = rep(row.names(series),length(t2))
@@ -154,10 +165,10 @@ for (h in t2){
 ser.voom = NULL
 for (h in t2){
   #print(h)
-  if ( is.null(dim(series[,as.numeric(colnames(series))%%24==h])) ){
+  if ( is.null(dim(series[,as.numeric(colnames(series))%%period==h])) ){
     #print('Singular values')
     #if (bool.rnaseq){ser.voom = voom(ser)} else{ser.voom = vooma(ser)}
-    ser.voom$E = series[,as.numeric(colnames(series))%%24==h]
+    ser.voom$E = series[,as.numeric(colnames(series))%%period==h]
     ser.voom$weights = rep(NaN,dim(series)[1])
     if (is.null(dim(ser.voom$E))){
         for (i in c(1:(MAX-1))){
@@ -169,8 +180,8 @@ for (h in t2){
     #mean(ser.voom$weights),dim(ser.voom$weights)[1])
     }
   else{
-      #print('Non-singular values')
-      ser = series[,as.numeric(colnames(series))%%24==h]
+      print('Non-singular values')
+      ser = series[,as.numeric(colnames(series))%%period==h]
       
       ser = f_changeNA(ser)
       
@@ -182,15 +193,16 @@ for (h in t2){
       
   }
   if (is.null(dim(ser.voom$E))){
-      #print('Second singular')
+      print('Second singular')
     for (i in c(1:(MAX-1))){
       ser.voom$weights = cbind(ser.voom$weights,rep(NaN,length(ser.voom$weights)))
       ser.voom$E = cbind(ser.voom$E,rep(NaN,length(ser.voom$E)))
     }
   }
   else if(dim(ser.voom$E)[2]!=MAX){
-      #print('Second non-singular')
-    for (i in c(1:(MAX-dim(ser)[2]))){
+      print('Second non-singular')
+      #print(ser.voom)
+    for (i in c(1:(MAX-dim(ser.voom)[2]))){
       ser.voom$weights = cbind(ser.voom$weights,rep(NaN,dim(ser.voom$weights)[1]))      
       ser.voom$E = cbind(ser.voom$E,rep(NaN,dim(ser.voom$weights)[1])) 
       #ser=cbind(ser,rep(NaN,dim(ser)[1]))   
@@ -248,6 +260,8 @@ getmode <- function(v) {
   uniqv[which.max(tabulate(match(v, uniqv)))]
 }
 #print('Is the problem here')
+#print('series.new is')
+#print(series.new)
 sds.pre = 1/sqrt(series.new$weights[,1])
 #print(head(sds.pre))
 sds.pre.nona = sds.pre[!is.na(sds.pre)]

@@ -131,7 +131,9 @@ def main(args):
         command = 'Rscript'
 
         pref=fn.replace('.txt','')
-        period='24'
+        #print fn_period
+        #print pd.read_table(fn_period,header=None)
+        period=str(pd.read_table(fn_period,header=None)[0][0])        
         if args.rnaseq:
             arguments = [fn, pref, period,'rnaseq']
         else:
@@ -207,7 +209,7 @@ def main(args):
 
         command = 'Rscript'
         pref=fn_null.replace('.txt','')
-        period='24'
+        period=str(pd.read_table(fn_period,header=None)[0][0])
         arguments = [fn_null, pref, period]
         cmd = [command, path2script] + arguments
         subprocess.call(cmd)    
